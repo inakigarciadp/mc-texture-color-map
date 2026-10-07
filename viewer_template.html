@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Block color map</title>
+<style>
+html, body { margin: 0; background: #80807c; font: 13px system-ui, sans-serif; overflow-x: hidden; }
+#bar { position: sticky; top: 0; z-index: 3; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+       padding: 6px; background: #6a6a66f0; }
+.seg { display: flex; border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; padding: 7px 10px; background: #474744; color: #ddd; font: inherit; cursor: pointer; }
+.seg button.on { background: #e8e8e4; color: #222; }
+#wrap { display: flex; justify-content: center; padding: 6px; }
+#map { position: relative; touch-action: manipulation; }
+#map div { position: absolute; left: 0; top: 0; background-size: 100% 100%; image-rendering: pixelated;
+           transition: transform .5s ease; cursor: pointer; }
+#map div.sel { outline: 2px solid #fff; z-index: 1; }
+#tip { position: fixed; z-index: 4; pointer-events: none; display: none; white-space: nowrap;
+       background: #111e; color: #fff; padding: 5px 9px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<div id="bar"><div class="seg" id="views"></div><div class="seg" id="layouts"></div></div>
+<div id="wrap"><div id="map"></div></div>
+<div id="tip"></div>
+<script>
+const D = /*DATA*/null;
+const VIEWS = Object.keys(D.views);
+const LAYOUTS = ["reference", "wheel", "spectrum", "rows", "som"].filter(l => l in D.views.side.layouts);
+let view = "side", layout = LAYOUTS[0], sel = null;
+
+// one css class per texture, so each data url is parsed once
+document.head.insertAdjacentHTML("beforeend", "<style>" +
+  D.tex.map((b, i) => `.t${i}{background-image:url(data:image/png;base64,${b})}`).join("") + "</style>");
+
+const map = document.getElementById("map"), tip = document.getElementById("tip");
+// each view has its own tiles (a log shows rings and bark on top), so they are rebuilt when the view changes
+let tiles = [], tilesView = null;
+function build() {
+  map.replaceChildren();
+  tiles = D.views[view].t.map((t, i) => {
+    const e = document.createElement("div");
+    e.dataset.i = i;
+    e.className = "t" + t;
+    map.appendChild(e);
+    return e;
+  });
+  tilesView = view;
+}
+
+function buttons(id, items, get, set) {
+  const el = document.getElementById(id);
+  for (const it of items) {
+    const btn = document.createElement("button");
+    btn.textContent = it;
+    btn.onclick = () => { set(it); el.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === btn)); draw(); };
+    btn.classList.toggle("on", it === get());
+    el.appendChild(btn);
+  }
+}
+buttons("views", VIEWS, () => view, v => { if (v !== view) select(null); view = v; });
+buttons("layouts", LAYOUTS, () => layout, v => layout = v);
+
+function draw() {
+  const V = D.views[view], L = V.layouts[layout];
+  const fresh = tilesView !== view;
+  if (fresh) build();
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (let i = 0; i < L.length; i += 2) {
+    x0 = Math.min(x0, L[i]); x1 = Math.max(x1, L[i]);
+    y0 = Math.min(y0, L[i + 1]); y1 = Math.max(y1, L[i + 1]);
+  }
+  const cols = x1 - x0 + 1, rows = y1 - y0 + 1;
+  const w = innerWidth - 12, h = innerHeight - document.getElementById("bar").offsetHeight - 12;
+  // phones: fit the width and scroll; wide screens: fit the whole map
+  const cell = Math.max(8, Math.floor(w < 700 ? w / cols : Math.min(w / cols, h / rows)));
+  map.style.width = cols * cell + "px";
+  map.style.height = rows * cell + "px";
+  tiles.forEach((e, i) => {
+    if (fresh) e.style.transition = "none";
+    e.style.width = e.style.height = cell + "px";
+    e.style.transform = `translate(${(L[2 * i] - x0) * cell}px,${(L[2 * i + 1] - y0) * cell}px)`;
+  });
+  if (fresh) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
+  if (sel !== null) setTimeout(pin, 520);
+}
+
+function show(i, x, y) {
+  tip.textContent = D.views[view].n[i];
+  tip.style.display = "block";
+  tip.style.left = Math.max(4, Math.min(x, innerWidth - tip.offsetWidth - 4)) + "px";
+  tip.style.top = Math.max(4, y) + "px";
+}
+
+function pin() {
+  if (sel === null) return;
+  const r = tiles[sel].getBoundingClientRect();
+  show(sel, 0, 0);
+  show(sel, r.left + r.width / 2 - tip.offsetWidth / 2, r.top - tip.offsetHeight - 6);
+}
+
+function select(i) {
+  if (sel !== null) tiles[sel].classList.remove("sel");
+  sel = i;
+  if (sel === null) { tip.style.display = "none"; return; }
+  tiles[sel].classList.add("sel");
+  pin();
+}
+
+map.addEventListener("pointermove", e => {
+  if (e.pointerType !== "mouse" || sel !== null) return;
+  const i = e.target.dataset.i;
+  if (i === undefined) tip.style.display = "none";
+  else show(+i, e.clientX + 14, e.clientY + 16);
+});
+map.addEventListener("pointerleave", () => { if (sel === null) tip.style.display = "none"; });
+document.addEventListener("click", e => {
+  const i = e.target.dataset ? e.target.dataset.i : undefined;
+  if (i !== undefined) select(+i === sel ? null : +i);
+  else if (!e.target.closest("#bar")) select(null);
+});
+addEventListener("scroll", pin, { passive: true });
+addEventListener("resize", draw);
+draw();
+</script>
+</body>
+</html>
