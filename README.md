@@ -7,7 +7,7 @@ uv run color_map.py [--layouts wheel,reference,spectrum,rows,som] [--png-views s
 ```
 
 - Reads textures, block models and blockstates straight from Prism's client jar (`libraries/com/mojang/minecraft/<version>/`).
-- Keeps blocks whose model is one or more full 0–16 cubes (multipart blocks use their item model). Blocks you can't get in survival are left out (`UNOBTAINABLE`: command blocks, bedrock, suspicious sand…). Animated textures use their first frame. Tinted textures (grass, leaves) get their plains color.
+- Keeps blocks whose model is one or more full 0–16 cubes (multipart blocks use their item model). Blocks you can't get in survival are left out (`UNOBTAINABLE`: command blocks, bedrock, suspicious sand…). Animated textures use their first frame. Tinted textures (grass, leaves) get their plains color. In the top view, the grass block gets one tile per biome grass color: the biome's own color, not the blends at its borders. Swamps get both of their patch colors, and biomes with the same color share a tile.
 - Color = alpha-weighted mean of the front face, in linear light, compared in OKLab.
 - Three views, each laid out by the color of its own face: `side` (walls), `top` (floors), `bottom` (ceilings).
 - Blocks that can be turned (logs, pillars, barrels, observers, furnaces…) show every texture their placements put on that face. A log, for example, has a bark tile and a rings tile in every view. Only orientation properties count (`ORIENTATION`), and the rest stay at the default state. Blocks sharing a texture share one tile, and its tooltip lists all of them (oak log and oak wood bark).

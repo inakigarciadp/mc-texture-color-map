@@ -16,7 +16,7 @@ html, body { margin: 0; background: #80807c; font: 13px system-ui, sans-serif; o
 #map div { position: absolute; left: 0; top: 0; background-size: 100% 100%; image-rendering: pixelated;
            transition: transform .5s ease; cursor: pointer; }
 #map div.sel { outline: 2px solid #fff; z-index: 1; }
-#tip { position: fixed; z-index: 4; pointer-events: none; display: none; white-space: nowrap;
+#tip { position: fixed; z-index: 4; pointer-events: none; display: none; max-width: min(90vw, 420px);
        background: #111e; color: #fff; padding: 5px 9px; border-radius: 5px; }
 </style>
 </head>

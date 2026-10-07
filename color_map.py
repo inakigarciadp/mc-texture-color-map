@@ -30,6 +30,10 @@ UNOBTAINABLE = {"bedrock", "budding_amethyst", "command_block", "chain_command_b
                 "structure_block", "jigsaw", "test_block", "test_instance_block", "reinforced_deepslate",
                 "frosted_ice", "suspicious_sand", "suspicious_gravel", "spawner", "trial_spawner", "vault"}
 
+# biomes where grass doesn't grow naturally (oceans are skipped by name)
+NO_GRASS_BIOMES = {"nether_wastes", "crimson_forest", "warped_forest", "soul_sand_valley", "basalt_deltas",
+                   "the_end", "end_barrens", "end_highlands", "end_midlands", "small_end_islands", "the_void"}
+
 # what each view shows: the model face whose color it is laid out by
 VIEWS = {"side": "north", "top": "up", "bottom": "down"}
 
@@ -196,6 +200,47 @@ def collect_blocks(assets):
         if variants:
             blocks.append({"name": name, "variants": variants})
     return blocks
+
+
+def biome_grass_colors(assets):
+    """Grass color of every overworld biome (the biome's own color, not the blends at its borders),
+    grouped by color: [(rgb, [biomes])]. Same rules as the game: a fixed grass_color, else the
+    grass colormap at (temperature, downfall), then the dark forest / swamp modifiers."""
+    cmap = Image.open(io.BytesIO(assets.z.read("assets/minecraft/textures/colormap/grass.png"))).convert("RGB")
+    groups = {}
+    for n in sorted(assets.names):
+        if not (n.startswith("data/minecraft/worldgen/biome/") and n.endswith(".json")):
+            continue
+        name = n.rsplit("/", 1)[1].removesuffix(".json")
+        if "ocean" in name or name in NO_GRASS_BIOMES:
+            continue
+        b = json.loads(assets.z.read(n))
+        eff = b.get("effects", {})
+        if "grass_color" in eff:
+            colors = [int(eff["grass_color"].lstrip("#"), 16)]
+        else:
+            t = min(max(b["temperature"], 0), 1)
+            d = min(max(b["downfall"], 0), 1) * t
+            r, g, bb = cmap.getpixel((int((1 - t) * 255), int((1 - d) * 255)))
+            colors = [r << 16 | g << 8 | bb]
+        mod = eff.get("grass_color_modifier")
+        if mod == "dark_forest":
+            colors = [((c & 0xFEFEFE) + 0x28340A) >> 1 for c in colors]
+        elif mod == "swamp":
+            colors = [0x4C763C, 0x6A7039]  # two patch colors picked by noise
+        for c in colors:
+            groups.setdefault(c, []).append(name)
+    return [((c >> 16, c >> 8 & 255, c & 255), names) for c, names in groups.items()]
+
+
+def add_biome_grass(entries, assets):
+    """Replace the grass block's top tile with one per biome grass color."""
+    i = next(i for i, e in enumerate(entries) if "grass_block" in e["names"])
+    grass = entries.pop(i)
+    top = assets.texture("block/grass_block_top")
+    for rgb, biomes in biome_grass_colors(assets):
+        faces = dict(grass["faces"], up=tinted(top, rgb))
+        entries.append({"names": [f"grass_block ({', '.join(biomes)})"], "faces": faces})
 
 
 def view_entries(blocks, face):
@@ -506,6 +551,8 @@ def main():
     data, html_views = {}, {}
     for view, face in VIEWS.items():
         entries = view_entries(blocks, face)
+        if view == "top":
+            add_biome_grass(entries, assets)
         for e in entries:
             lin = average_color(e["faces"][face])
             e["lab"] = oklab(lin)
