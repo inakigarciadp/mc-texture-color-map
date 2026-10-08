@@ -13,7 +13,7 @@ uv run color_map.py [--layouts wheel,reference,spectrum,rows,som] [--png-views s
 - Blocks that can be turned (logs, pillars, barrels, observers, furnaces…) show every texture their placements put on that face. A log, for example, has a bark tile and a rings tile in every view. Only orientation properties count (`ORIENTATION`), and the rest stay at the default state. Blocks sharing a texture share one tile, and its tooltip lists all of them (oak log and oak wood bark).
 - Output:
   - `out/color-map-<version>-<layout>[-<view>].png`: side view by default, other views with `--png-views`.
-  - `out/color-map-<version>.html`: a single self-contained page (textures inlined, about 330 KB) to open on a phone. It has view and layout toggles, and shows the block name on hover or tap. Built from `viewer_template.html`.
+  - `out/color-map-<version>.html`: a single self-contained page (textures inlined, about 330 KB) to open on a phone. It has view and layout toggles, and shows the block name on hover or tap. **Match**: tap a tile and press `match`. A badge keeps that block on screen in every view, and the map dims everything except its zones: closest (same hue ±30°, any lightness), neutrals (grays) and accent (opposite hue ±30°). Each zone can be toggled from the badge. Built from `viewer_template.html`.
   - `out/colors-<version>.json`: per view, a list of tiles with their blocks, hex, OKLab and grid cell per layout.
 
 Layouts:

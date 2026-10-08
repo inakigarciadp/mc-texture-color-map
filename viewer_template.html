@@ -18,17 +18,48 @@ html, body { margin: 0; background: #80807c; font: 13px system-ui, sans-serif; o
 #map div.sel { outline: 2px solid #fff; z-index: 1; }
 #tip { position: fixed; z-index: 4; pointer-events: none; display: none; max-width: min(90vw, 420px);
        background: #111e; color: #fff; padding: 5px 9px; border-radius: 5px; }
+#tip.pinned { pointer-events: auto; }
+#tip button { display: none; margin-left: 8px; border: 0; border-radius: 4px; padding: 3px 8px;
+              background: #e8e8e4; color: #222; font: inherit; cursor: pointer; }
+#tip.pinned button { display: inline-block; }
+/* match mode: dim everything, light up the zones */
+#map { --b: 1px; --m: 6px; }
+#map.matching div { opacity: .12; filter: grayscale(1); }
+#map.matching div.on { opacity: 1; filter: none; }
+/* zone = a small corner triangle, so the texture itself stays fully visible */
+#map div.z-close::after, #map div.z-neutral::after, #map div.z-accent::after {
+  content: ""; position: absolute; left: 0; top: 0; width: var(--m); height: var(--m);
+  clip-path: polygon(0 0, 100% 0, 0 100%); opacity: .85; }
+#map div.z-close::after { background: #ffb02e; }
+#map div.z-neutral::after { background: #f4f4f0; }
+#map div.z-accent::after { background: #2ee6f0; }
+#map div.z-src { box-shadow: inset 0 0 0 var(--b) #ff3030; z-index: 1; }
+#chip { position: fixed; z-index: 3; left: 10px; bottom: 10px; display: none; align-items: center; gap: 8px;
+        padding: 6px; border-radius: 8px; background: #2a2a28ee; }
+#chip .src { width: 40px; height: 40px; background-size: 100% 100%; image-rendering: pixelated;
+             box-shadow: inset 0 0 0 3px #ff3030; }
+#chip button { width: 26px; height: 26px; border-radius: 5px; border: 3px solid; background: none; cursor: pointer; padding: 0; }
+#chip button.on { background: currentColor; }
+#chip .x { border: 0; color: #ddd; font: 18px system-ui, sans-serif; }
 </style>
 </head>
 <body>
 <div id="bar"><div class="seg" id="views"></div><div class="seg" id="layouts"></div></div>
 <div id="wrap"><div id="map"></div></div>
-<div id="tip"></div>
+<div id="tip"><span></span><button>match</button></div>
+<div id="chip"><div class="src"></div>
+  <button data-z="close" title="closest colors" style="color:#ffb02e"></button>
+  <button data-z="neutral" title="neutrals" style="color:#f4f4f0"></button>
+  <button data-z="accent" title="accent (opposite side)" style="color:#2ee6f0"></button>
+  <button class="x" title="stop matching">✕</button></div>
 <script>
 const D = /*DATA*/null;
 const VIEWS = Object.keys(D.views);
 const LAYOUTS = ["reference", "wheel", "spectrum", "rows", "som"].filter(l => l in D.views.side.layouts);
 let view = "side", layout = LAYOUTS[0], sel = null;
+// match mode: a tile from any view whose color the current view is compared against
+let match = null, zones = { close: true, neutral: false, accent: false };
+try { ({ match, zones } = JSON.parse(localStorage.getItem("cmap-match")) || { match, zones }); } catch (e) {}
 
 // one css class per texture, so each data url is parsed once
 document.head.insertAdjacentHTML("beforeend", "<style>" +
@@ -82,12 +113,54 @@ function draw() {
     e.style.width = e.style.height = cell + "px";
     e.style.transform = `translate(${(L[2 * i] - x0) * cell}px,${(L[2 * i + 1] - y0) * cell}px)`;
   });
+  map.style.setProperty("--b", Math.max(1, Math.round(cell / 24)) + "px");
+  map.style.setProperty("--m", Math.max(4, Math.round(cell / 5)) + "px");
   if (fresh) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
+  if (fresh) applyMatch();
   if (sel !== null) setTimeout(pin, 520);
 }
 
+function lch(L, a, b) {
+  return [L, Math.hypot(a, b), (Math.atan2(b, a) * 180 / Math.PI + 360) % 360];
+}
+
+// zones relative to the matched color: closest = same hue slice (±30°, any lightness), neutrals = the grays,
+// accent = the opposite hue slice. A gray source has no hue, so its closest zone is the grays.
+function applyMatch() {
+  const chip = document.getElementById("chip");
+  try { localStorage.setItem("cmap-match", JSON.stringify({ match, zones })); } catch (e) {}
+  map.classList.toggle("matching", !!match);
+  chip.style.display = match ? "flex" : "none";
+  if (!match) { tiles.forEach(e => e.classList.remove("on", "z-close", "z-neutral", "z-accent", "z-src")); return; }
+  chip.querySelector(".src").className = "src t" + match.t;
+  chip.querySelectorAll("[data-z]").forEach(b => b.classList.toggle("on", zones[b.dataset.z]));
+  const [, sC, sH] = lch(...match.c), G = D.gray * 1000, C = D.views[view].c;
+  tiles.forEach((e, i) => {
+    const [, c, h] = lch(C[3 * i], C[3 * i + 1], C[3 * i + 2]);
+    const dh = Math.abs(((h - sH) % 360 + 540) % 360 - 180);
+    let z = null;
+    if (c < G) z = sC < G && zones.close ? "close" : "neutral";
+    else if (sC >= G && dh <= 30) z = "close";
+    else if (sC >= G && dh >= 150) z = "accent";
+    const src = D.views[view].t[i] === match.t;
+    const on = src || (z !== null && zones[z]);
+    e.classList.toggle("on", on);
+    e.classList.toggle("z-src", src);
+    for (const k of ["close", "neutral", "accent"]) e.classList.toggle("z-" + k, on && !src && z === k);
+  });
+}
+
+document.querySelector("#tip button").onclick = () => {
+  const V = D.views[view];
+  match = { t: V.t[sel], c: V.c.slice(3 * sel, 3 * sel + 3) };
+  select(null);
+  applyMatch();
+};
+document.querySelectorAll("#chip [data-z]").forEach(b => b.onclick = () => { zones[b.dataset.z] = !zones[b.dataset.z]; applyMatch(); });
+document.querySelector("#chip .x").onclick = () => { match = null; applyMatch(); };
+
 function show(i, x, y) {
-  tip.textContent = D.views[view].n[i];
+  tip.firstChild.textContent = D.views[view].n[i];
   tip.style.display = "block";
   tip.style.left = Math.max(4, Math.min(x, innerWidth - tip.offsetWidth - 4)) + "px";
   tip.style.top = Math.max(4, y) + "px";
@@ -103,6 +176,7 @@ function pin() {
 function select(i) {
   if (sel !== null) tiles[sel].classList.remove("sel");
   sel = i;
+  tip.classList.toggle("pinned", sel !== null);
   if (sel === null) { tip.style.display = "none"; return; }
   tiles[sel].classList.add("sel");
   pin();
@@ -118,7 +192,7 @@ map.addEventListener("pointerleave", () => { if (sel === null) tip.style.display
 document.addEventListener("click", e => {
   const i = e.target.dataset ? e.target.dataset.i : undefined;
   if (i !== undefined) select(+i === sel ? null : +i);
-  else if (!e.target.closest("#bar")) select(null);
+  else if (!e.target.closest("#bar, #tip, #chip")) select(null);
 });
 addEventListener("scroll", pin, { passive: true });
 addEventListener("resize", draw);

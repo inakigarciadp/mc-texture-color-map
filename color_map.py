@@ -513,10 +513,10 @@ def png_b64(im):
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def write_html(views, path):
+def write_html(views, path, gray_chroma):
     """One self-contained page: textures inlined as base64 PNGs, every view's tiles and layouts."""
     tex, tex_idx = [], {}
-    data = {"tex": tex, "views": {}}
+    data = {"tex": tex, "gray": gray_chroma, "views": {}}
     for view, (entries, layouts) in views.items():
         t = []
         for e in entries:
@@ -527,7 +527,9 @@ def write_html(views, path):
                 tex.append(png_b64(im))
             t.append(tex_idx[key])
         data["views"][view] = {"n": [", ".join(n.replace("_", " ") for n in e["names"]) for e in entries],
-                               "t": t, "layouts": layouts}
+                               "t": t, "layouts": layouts,
+                               # OKLab ×1000 per tile, for match mode
+                               "c": [round(v * 1000) for e in entries for v in e["lab"]]}
     tpl = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "viewer_template.html")).read()
     with open(path, "w") as f:
         f.write(tpl.replace("/*DATA*/null", json.dumps(data, separators=(",", ":"))))
@@ -575,7 +577,7 @@ def main():
     with open(os.path.join(args.out, f"colors-{args.version}.json"), "w") as f:
         json.dump(data, f, indent=1)
     html = os.path.join(args.out, f"color-map-{args.version}.html")
-    write_html(html_views, html)
+    write_html(html_views, html, args.gray_chroma)
     print(f"-> {html} ({os.path.getsize(html) // 1024} KB)")
 
 if __name__ == "__main__":
