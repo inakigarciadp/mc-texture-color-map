@@ -314,13 +314,18 @@ def snap_greedy(targets):
     return cells
 
 
-def snap_optimal(targets, margin=3):
-    """Assign blocks to distinct grid cells minimizing the total squared distance to their targets."""
+def snap_optimal(targets, margin=3, packed=False, sigma=2.0):
+    """Assign blocks to distinct grid cells minimizing the total squared distance to their targets.
+    With `packed`, the cells are the len(targets) densest ones (targets blurred by `sigma` cells),
+    a solid blob in the targets' shape, so sparse spots don't leave holes."""
     t = np.array(targets)
     cand = sorted({(int(round(x)) + dx, int(round(y)) + dy) for x, y in t
                    for dx in range(-margin, margin + 1) for dy in range(-margin, margin + 1)})
     c = np.array(cand, dtype=float)
     cost = ((t[:, None, :] - c[None, :, :]) ** 2).sum(2)
+    if packed:
+        dense = np.argsort(-np.exp(-cost / (2 * sigma ** 2)).sum(0))[:len(t)]
+        cand, cost = [cand[k] for k in dense], cost[:, dense]
     rows, cols = linear_sum_assignment(cost)
     cells = [None] * len(targets)
     for r, k in zip(rows, cols):
@@ -355,10 +360,42 @@ def layout_wheel(blocks, gray_chroma, per_sector=8, hue_start=250):
     return snap_greedy(targets), []
 
 
-def layout_reference(blocks, gray_chroma, k=24):
+def layout_wheel_gaps(blocks, gray_chroma, honest=0.5, hole=0.2, fill=0.6, hue_start=250):
+    """The wheel with gaps: angle and radius follow the colors themselves instead of ranks, so hues and
+    lightnesses no block has show up as empty space. Angle is a blend of the true hue (`honest`) and the
+    hue rank, so empty hue ranges open a gap while crowded ones (reds to yellows) still get room.
+    Radius is the lightness, from a `hole` in the middle to the rim. Grays keep their wedge at the top,
+    one slot per block, ordered by their faint hue."""
+    n = len(blocks)
+    c = [lch(b) for b in blocks]
+    hue = [(h - hue_start) % 360 for _, _, h in c]
+    L = [x[0] for x in c]
+    lo, hi = min(L), max(L)
+    gray = sorted((i for i in range(n) if c[i][1] < gray_chroma), key=lambda i: hue[i])
+    col = sorted((i for i in range(n) if c[i][1] >= gray_chroma), key=lambda i: hue[i])
+    g = len(gray) / n
+    hs = np.array([hue[i] for i in col])
+    frac = {i: g * (k + 0.5) / len(gray) for k, i in enumerate(gray)}
+    for i in col:
+        rank = (np.searchsorted(hs, hue[i], "left") + np.searchsorted(hs, hue[i], "right")) / 2 / len(hs)
+        frac[i] = g + (1 - g) * ((1 - honest) * rank + honest * hue[i] / 360)
+    R = math.sqrt(n / fill / math.pi / (1 - hole ** 2))  # the ring holds n cells at `fill` density
+    offset = -math.pi / 2 - math.pi * g  # gray wedge centered at the top
+    targets = []
+    for i in range(n):
+        a = offset + 2 * math.pi * frac[i]
+        r = R * (hole + (1 - hole) * (L[i] - lo) / (hi - lo))
+        targets.append((r * math.cos(a), r * math.sin(a)))
+    return snap_optimal(targets, margin=4), []
+
+
+def layout_reference(blocks, gray_chroma, k=24, gaps=False, spread=1.15, cluster=1.5):
     """Same color distribution as the reddit image: each block goes to the mean position of the
     k reference samples closest in color (reference_anchors.json, see extract_reference.py).
-    Both color sets are standardized per OKLab channel first, which evens out the screenshot's lighting."""
+    Both color sets are standardized per OKLab channel first, which evens out the screenshot's lighting.
+    With `gaps`, the image's gaps stay open: only the samples within `cluster` tiles of their weighted
+    medoid count, so a color found in two separate places lands in one of them instead of in the gap
+    between them, and the map is `spread` times roomier."""
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reference_anchors.json")
     with open(path) as f:
         ref = np.array(json.load(f))
@@ -369,11 +406,16 @@ def layout_reference(blocks, gray_chroma, k=24):
     d = ((bc[:, None, :] - rc[None, :, :]) ** 2).sum(2)
     near = np.argsort(d, 1)[:, :k]
     w = 1 / (np.take_along_axis(d, near, 1) + 0.02)
-    pos = (rp[near] * w[..., None]).sum(1) / w.sum(1)[:, None]
+    p = rp[near]
+    if gaps:
+        pd = np.sqrt(((p[:, :, None] - p[:, None]) ** 2).sum(-1))
+        medoid = np.argmin((pd * w[:, None, :]).sum(2), 1)
+        w = w * (pd[np.arange(len(p)), medoid] <= cluster)
+    pos = (p * w[..., None]).sum(1) / w.sum(1)[:, None]
     pos -= pos.mean(0)
     # the reddit map holds ~500 blocks; scale its area to our block count
-    pos *= math.sqrt(len(blocks) / 500)
-    return snap_optimal([tuple(p) for p in pos]), []
+    pos *= (spread if gaps else 1) * math.sqrt(len(blocks) / 500)
+    return snap_optimal([tuple(p) for p in pos], packed=not gaps), []
 
 
 def layout_spectrum(blocks, gray_chroma, hue_start=15):
@@ -464,8 +506,10 @@ def layout_som(blocks, gray_chroma, epochs=80, seed=0):
     return cells, []
 
 
-LAYOUTS = {"wheel": layout_wheel, "reference": layout_reference, "spectrum": layout_spectrum,
-           "rows": layout_rows, "som": layout_som}
+# "<name>-gaps" is <name> with empty space where no block has the colors; the viewer toggles between them
+LAYOUTS = {"wheel": layout_wheel, "wheel-gaps": layout_wheel_gaps, "reference": layout_reference,
+           "reference-gaps": lambda blocks, gray_chroma: layout_reference(blocks, gray_chroma, gaps=True),
+           "spectrum": layout_spectrum, "rows": layout_rows, "som": layout_som}
 
 
 def shade(im, k):

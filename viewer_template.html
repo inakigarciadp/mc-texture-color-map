@@ -11,6 +11,7 @@ html, body { margin: 0; background: #80807c; font: 13px system-ui, sans-serif; o
 .seg { display: flex; border-radius: 6px; overflow: hidden; }
 .seg button { border: 0; padding: 7px 10px; background: #474744; color: #ddd; font: inherit; cursor: pointer; }
 .seg button.on { background: #e8e8e4; color: #222; }
+.seg button:disabled { opacity: .4; cursor: default; }
 #wrap { display: flex; justify-content: center; padding: 6px; }
 #map { position: relative; touch-action: manipulation; }
 #map div { position: absolute; left: 0; top: 0; background-size: 100% 100%; image-rendering: pixelated;
@@ -44,7 +45,8 @@ html, body { margin: 0; background: #80807c; font: 13px system-ui, sans-serif; o
 </style>
 </head>
 <body>
-<div id="bar"><div class="seg" id="views"></div><div class="seg" id="layouts"></div></div>
+<div id="bar"><div class="seg" id="views"></div><div class="seg" id="layouts"></div>
+  <div class="seg"><button id="gaps" title="leave empty space where no block has the colors">gaps</button></div></div>
 <div id="wrap"><div id="map"></div></div>
 <div id="tip"><span></span><button>match</button></div>
 <div id="chip"><div class="src"></div>
@@ -57,6 +59,9 @@ const D = /*DATA*/null;
 const VIEWS = Object.keys(D.views);
 const LAYOUTS = ["reference", "wheel", "spectrum", "rows", "som"].filter(l => l in D.views.side.layouts);
 let view = "side", layout = LAYOUTS[0], sel = null;
+// layouts with a "<name>-gaps" variant can be toggled to it
+let gaps = false;
+const hasGaps = () => layout + "-gaps" in D.views[view].layouts;
 // match mode: a tile from any view whose color the current view is compared against
 let match = null, zones = { close: true, neutral: false, accent: false };
 try { ({ match, zones } = JSON.parse(localStorage.getItem("cmap-match")) || { match, zones }); } catch (e) {}
@@ -92,9 +97,13 @@ function buttons(id, items, get, set) {
 }
 buttons("views", VIEWS, () => view, v => { if (v !== view) select(null); view = v; });
 buttons("layouts", LAYOUTS, () => layout, v => layout = v);
+const gapsBtn = document.getElementById("gaps");
+gapsBtn.onclick = () => { gaps = !gaps; draw(); };
 
 function draw() {
-  const V = D.views[view], L = V.layouts[layout];
+  const V = D.views[view], L = V.layouts[gaps && hasGaps() ? layout + "-gaps" : layout];
+  gapsBtn.disabled = !hasGaps();
+  gapsBtn.classList.toggle("on", gaps && hasGaps());
   const fresh = tilesView !== view;
   if (fresh) build();
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;

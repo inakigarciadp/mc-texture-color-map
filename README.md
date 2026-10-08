@@ -3,7 +3,7 @@
 A color map of every full-cube block's texture, like [this reddit post](https://www.reddit.com/r/Minecraft/comments/14jrc92/created_a_full_color_palette_for_all_the_blocks/), for picking palettes and gradients.
 
 ```
-uv run color_map.py [--layouts wheel,reference,spectrum,rows,som] [--png-views side,top,bottom] [--version 26.3] [--jar PATH] [--size 64] [--gray-chroma 0.03] [--out out/]
+uv run color_map.py [--layouts wheel,wheel-gaps,reference,reference-gaps,spectrum,rows,som] [--png-views side,top,bottom] [--version 26.3] [--jar PATH] [--size 64] [--gray-chroma 0.03] [--out out/]
 ```
 
 - Reads textures, block models and blockstates straight from Prism's client jar (`libraries/com/mojang/minecraft/<version>/`).
@@ -18,7 +18,11 @@ uv run color_map.py [--layouts wheel,reference,spectrum,rows,som] [--png-views s
 
 Layouts:
 - `wheel`: a disc. Hue goes around it, and grays get a wedge at the top. Lightness goes from a dark center to a light rim, so every ray is a gradient. Each hue slice holds the same number of blocks.
-- `reference`: the reddit image's color distribution. Each block goes to the mean position of the reference samples nearest in color. The samples are stored in `reference_anchors.json`, made with `uv run extract_reference.py <reddit-image.png>`.
+- `reference`: the reddit image's color distribution, packed into a solid shape with no holes. Each block goes to the mean position of the reference samples nearest in color. The samples are stored in `reference_anchors.json`, made with `uv run extract_reference.py <reddit-image.png>`.
 - `spectrum`: a rectangle. Hue runs left to right (grays first), and each column runs dark to light, bottom to top.
 - `rows`: one labeled band per color family (white, gray, black, brown, red… pink). Within a band, dark is on the left and light on the right.
 - `som`: a self-organizing map. A square where every block sits next to the most similar blocks, so any straight line across it is a smooth gradient.
+
+Gapped variants (`<layout>-gaps`, the `gaps` toggle in the viewer, off for layouts without one) leave empty space where no block has the colors, so touching tiles are close in color and a gap means a jump:
+- `wheel-gaps`: angle follows the real hue (half true hue, half rank, so the crowded reds to yellows still fit), and radius follows the real lightness.
+- `reference-gaps`: keeps the reddit image's gaps. Each block goes where the reference samples nearest in color bunch up, so it never lands in the gap between two clusters.
