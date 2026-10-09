@@ -135,7 +135,8 @@ const LAYOUTS = ["reference", "wheel", "spectrum", "rows", "som"].filter(l => l 
 let view = "side", layout = LAYOUTS[0], sel = null;
 let gaps = false;
 const hasGaps = () => layout + "-gaps" in D.views[view].layouts;
-let match = null, zones = { close: true, neutral: false, accent: false };
+const ALL_ZONES = () => ({ close: true, neutral: true, accent: true });
+let match = null, zones = ALL_ZONES();
 try { ({ match, zones } = JSON.parse(localStorage.getItem("cmap-match")) || { match, zones }); } catch (e) {}
 
 document.head.insertAdjacentHTML("beforeend", "<style>" +
@@ -255,6 +256,7 @@ function applyMatch() {
 function startMatch() {
   const V = D.views[view];
   match = { t: V.t[sel], c: V.c.slice(3 * sel, 3 * sel + 3), n: V.n[sel] };
+  zones = ALL_ZONES();
   select(null);
   applyMatch();
 }
