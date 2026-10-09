@@ -324,13 +324,19 @@ function show(i, x, y) {
   tip.style.top = Math.max(4, Math.min(y, innerHeight - tip.offsetHeight - 4)) + "px";
 }
 
+// the pinned tooltip stays inside the visible part of the map, so it never covers the controls or the
+// matching panel, and hides while its tile is scrolled out of view
 function pin() {
   if (sel === null) return;
-  const r = tiles[sel].getBoundingClientRect();
+  const r = tiles[sel].getBoundingClientRect(), w = wrap.getBoundingClientRect(), panel = $(".matchsec");
+  const top = w.top + 4;
+  const bottom = (getComputedStyle(panel).position === "fixed" && match ? panel.getBoundingClientRect().top : w.bottom) - 4;
+  if (r.bottom < top || r.top > bottom) { tip.style.display = "none"; return; }
   show(sel, 0, 0);
-  const above = r.top - tip.offsetHeight - 8;
-  tip.classList.toggle("below", above < 4);
-  show(sel, r.left + r.width / 2 - tip.offsetWidth / 2, above < 4 ? r.bottom + 8 : above);
+  const above = r.top - tip.offsetHeight - 8, below = r.bottom + 8;
+  const up = above >= top || below + tip.offsetHeight > bottom;
+  tip.classList.toggle("below", !up);
+  show(sel, r.left + r.width / 2 - tip.offsetWidth / 2, up ? Math.max(top, above) : below);
 }
 
 function select(i) {
