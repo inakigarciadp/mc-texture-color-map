@@ -105,7 +105,6 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 #tip .sw, #tip .hex { display: none; }
 #tip .name { text-transform: capitalize; }
 #tip .match { background: #fff; color: #1f2024; padding: 6px; margin-top: 6px; justify-content: center; }
-@media (min-width: 761px) { #tip.pinned { display: none !important; } }
 @media (min-width: 761px) and (max-height: 720px) {
   #layouts button::after { display: none; }
   .top { padding-top: 14px; } section { padding-top: 10px; padding-bottom: 10px; }
@@ -343,8 +342,13 @@ function show(i, x, y) {
 
 // the pinned tooltip stays inside the visible part of the map, so it never covers the controls or the
 // matching panel, and hides while its tile is scrolled out of view
+// phones pin the tooltip to the selected tile; wide screens show the selection in the sidebar and keep hovering
+const phone = () => matchMedia("(max-width: 760px)").matches;
 function pin() {
-  if (sel === null) return;
+  const on = sel !== null && phone();
+  if (tip.classList.contains("pinned") && !on) tip.style.display = "none";
+  tip.classList.toggle("pinned", on);
+  if (!on) return;
   const r = tiles[sel].getBoundingClientRect(), w = wrap.getBoundingClientRect(), panel = $(".matchsec");
   const top = w.top + 4;
   const bottom = (getComputedStyle(panel).position === "fixed" && match ? panel.getBoundingClientRect().top : w.bottom) - 4;
@@ -359,22 +363,21 @@ function pin() {
 function select(i) {
   if (sel !== null) tiles[sel].classList.remove("sel");
   sel = i;
-  tip.classList.toggle("pinned", sel !== null);
   writeHash();
   document.body.classList.toggle("selecting", sel !== null);
-  if (sel === null) { tip.style.display = "none"; return; }
+  if (sel === null) { tip.classList.remove("pinned"); tip.style.display = "none"; return; }
   tiles[sel].classList.add("sel");
   fill($("#sel"), sel);
   pin();
 }
 
 map.addEventListener("pointermove", e => {
-  if (e.pointerType !== "mouse" || sel !== null) return;
+  if (e.pointerType !== "mouse" || tip.classList.contains("pinned")) return;
   const i = e.target.dataset.i;
   if (i === undefined) tip.style.display = "none";
   else show(+i, e.clientX + 14, e.clientY + 16);
 });
-map.addEventListener("pointerleave", () => { if (sel === null) tip.style.display = "none"; });
+map.addEventListener("pointerleave", () => { if (!tip.classList.contains("pinned")) tip.style.display = "none"; });
 document.addEventListener("click", e => {
   if (!e.target.closest(".info")) showInfo(false);
   const i = e.target.dataset ? e.target.dataset.i : undefined;
