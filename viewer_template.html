@@ -101,7 +101,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 @media (min-width: 761px) { #tip.pinned { display: none !important; } }
 @media (max-width: 760px) {
   body { flex-direction: column; }
-  #side { width: auto; border: 0; border-bottom: 1px solid #0002; overflow: visible; }
+  #side { width: auto; border: 0; border-bottom: 1px solid #0002; overflow: visible; position: relative; z-index: 5; }
   .top { padding: 12px 14px 10px; } .top p { display: none; }
   /* one full-width row per control, both choices as the same segmented control */
   .ctrls { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 10px; }
@@ -113,7 +113,13 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   #layouts button.on { background: #fff; color: #1f2024; font-weight: 600; box-shadow: 0 1px 3px #0002; }
   .info { display: grid; }
   /* the description is one tap away on phones */
-  #gapsinfo { display: none; padding: 0; } #gapsinfo.open { display: block; }
+  /* a popover over the map, so opening it doesn't push the map down */
+  .gapsec { position: relative; }
+  #gapsinfo { display: none; position: absolute; left: 0; top: calc(100% + 10px); max-width: 260px; padding: 8px 11px;
+    border-radius: 9px; background: #1f2024; color: #fff; font-size: 12.5px; box-shadow: 0 8px 24px #0004; }
+  #gapsinfo::before { content: ""; position: absolute; left: calc(var(--x, 90px) - 6px); top: -5px; width: 12px; height: 12px;
+    background: #1f2024; transform: rotate(45deg); border-radius: 2px; }
+  #gapsinfo.open { display: block; }
   #sel { display: none; }
   .matchsec { position: fixed; z-index: 10; left: 8px; right: 8px; bottom: 8px; background: #fafaf8; border-radius: 12px; padding: 10px; box-shadow: 0 8px 30px #0005; }
   #chip { flex-direction: row; flex-wrap: wrap; } #chip .head { width: 100%; } #chip [data-z] small { display: none; }
@@ -189,10 +195,15 @@ buttons("layouts", LAYOUTS, v => layout = v);
 const gapsBtn = $("#gaps");
 gapsBtn.onclick = () => { gaps = !gaps; draw(); };
 $(".gaplbl").onclick = e => { if (!e.target.closest(".info")) gapsBtn.click(); };
-$(".info").onclick = e => {
-  const open = $("#gapsinfo").classList.toggle("open");
-  e.currentTarget.setAttribute("aria-expanded", open);
-};
+const info = $(".info"), gapsInfo = $("#gapsinfo");
+function showInfo(open) {
+  gapsInfo.classList.toggle("open", open);
+  info.setAttribute("aria-expanded", open);
+  // point the popover's arrow at the button
+  const r = info.getBoundingClientRect(), s = gapsInfo.parentNode.getBoundingClientRect();
+  gapsInfo.style.setProperty("--x", r.left + r.width / 2 - s.left + "px");
+}
+info.onclick = () => showInfo(!gapsInfo.classList.contains("open"));
 
 function draw() {
   const V = D.views[view], L = V.layouts[gaps && hasGaps() ? layout + "-gaps" : layout];
@@ -336,11 +347,12 @@ map.addEventListener("pointermove", e => {
 });
 map.addEventListener("pointerleave", () => { if (sel === null) tip.style.display = "none"; });
 document.addEventListener("click", e => {
+  if (!e.target.closest(".info")) showInfo(false);
   const i = e.target.dataset ? e.target.dataset.i : undefined;
   if (i !== undefined) select(+i === sel ? null : +i);
   else if (!e.target.closest("#bar, #tip, #chip, #sel, #side, nav")) select(null);
 });
-addEventListener("keydown", e => { if (e.key === "Escape") select(null); });
+addEventListener("keydown", e => { if (e.key === "Escape") { select(null); showInfo(false); } });
 addEventListener("scroll", pin, { passive: true });
 wrap.addEventListener("scroll", pin, { passive: true });
 addEventListener("resize", draw);
