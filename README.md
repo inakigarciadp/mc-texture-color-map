@@ -1,5 +1,11 @@
 # mc-texture-color-map
 
+A few years ago, I saw [this reddit post](https://www.reddit.com/r/Minecraft/comments/14jrc92/created_a_full_color_palette_for_all_the_blocks/) and found it fascinating. A few days ago, while playing minecraft, that post came back to my mind and I thought that it would be cool to have that updated and a bit more user-friendly. So I created this tool.
+
+# "The Slop Line"
+
+Everything below this was written by my LLMs, not me.
+
 A color map of every full-cube block's texture, like [this reddit post](https://www.reddit.com/r/Minecraft/comments/14jrc92/created_a_full_color_palette_for_all_the_blocks/), for picking palettes and gradients.
 
 Open `out/color-map-26.3.html` in a browser (it works offline and on a phone). To rebuild it, you need [uv](https://docs.astral.sh/uv/) and a Minecraft client jar for the version:
