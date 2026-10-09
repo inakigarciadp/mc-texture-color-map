@@ -1,0 +1,6 @@
+{
+  // Static site: Cloudflare serves out/ as is, no Worker code
+  "name": "mc-texture-color-map",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./out" }
+}
