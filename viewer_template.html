@@ -1,77 +1,149 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Block color map</title>
 <style>
-html, body { margin: 0; background: #80807c; font: 13px system-ui, sans-serif; overflow-x: hidden; }
-#bar { position: sticky; top: 0; z-index: 3; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
-       padding: 6px; background: #6a6a66f0; }
-.seg { display: flex; border-radius: 6px; overflow: hidden; }
-.seg button { border: 0; padding: 7px 10px; background: #474744; color: #ddd; font: inherit; cursor: pointer; }
-.seg button.on { background: #e8e8e4; color: #222; }
-.seg button:disabled { opacity: .4; cursor: default; }
-#wrap { display: flex; justify-content: center; padding: 6px; }
-#map { position: relative; touch-action: manipulation; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { --z-close: #ffb02e; --z-neutral: #f4f4f0; --z-accent: #2ee6f0; --z-src: #ff3b30; }
+button { font: inherit; color: inherit; }
+#wrap { overflow: auto; display: grid; place-items: center; }
+#map { position: relative; touch-action: manipulation; --b: 1px; --m: 6px; }
 #map div { position: absolute; left: 0; top: 0; background-size: 100% 100%; image-rendering: pixelated;
-           transition: transform .5s ease; cursor: pointer; }
-#map div.sel { outline: 2px solid #fff; z-index: 1; }
-#tip { position: fixed; z-index: 4; pointer-events: none; display: none; max-width: min(90vw, 420px);
-       background: #111e; color: #fff; padding: 5px 9px; border-radius: 5px; }
-#tip.pinned { pointer-events: auto; }
-#tip button { display: none; margin-left: 8px; border: 0; border-radius: 4px; padding: 3px 8px;
-              background: #e8e8e4; color: #222; font: inherit; cursor: pointer; }
-#tip.pinned button { display: inline-block; }
-/* match mode: dim everything, light up the zones */
-#map { --b: 1px; --m: 6px; }
+           transition: transform .5s cubic-bezier(.3,.7,.2,1), opacity .25s, filter .25s; cursor: pointer; }
+#map div:hover { z-index: 2; }
 #map.matching div { opacity: .12; filter: grayscale(1); }
 #map.matching div.on { opacity: 1; filter: none; }
-/* zone = a small corner triangle, so the texture itself stays fully visible */
 #map div.z-close::after, #map div.z-neutral::after, #map div.z-accent::after {
   content: ""; position: absolute; left: 0; top: 0; width: var(--m); height: var(--m);
-  clip-path: polygon(0 0, 100% 0, 0 100%); opacity: .85; }
-#map div.z-close::after { background: #ffb02e; }
-#map div.z-neutral::after { background: #f4f4f0; }
-#map div.z-accent::after { background: #2ee6f0; }
-#map div.z-src { box-shadow: inset 0 0 0 var(--b) #ff3030; z-index: 1; }
-#chip { position: fixed; z-index: 3; left: 10px; bottom: 10px; display: none; align-items: center; gap: 8px;
-        padding: 6px; border-radius: 8px; background: #2a2a28ee; }
-#chip .src { width: 40px; height: 40px; background-size: 100% 100%; image-rendering: pixelated;
-             box-shadow: inset 0 0 0 3px #ff3030; }
-#chip button { width: 26px; height: 26px; border-radius: 5px; border: 3px solid; background: none; cursor: pointer; padding: 0; }
-#chip button.on { background: currentColor; }
-#chip .x { border: 0; color: #ddd; font: 18px system-ui, sans-serif; }
+  clip-path: polygon(0 0, 100% 0, 0 100%); opacity: .9; }
+#map div.z-close::after { background: var(--z-close); }
+#map div.z-neutral::after { background: var(--z-neutral); }
+#map div.z-accent::after { background: var(--z-accent); }
+#map div.z-src { box-shadow: inset 0 0 0 var(--b) var(--z-src); z-index: 1; }
+#tip { position: fixed; z-index: 20; pointer-events: none; display: none; }
+#tip.pinned { pointer-events: auto; }
+#tip .match { display: none; }
+#tip.pinned .match { display: inline-flex; }
+#chip { display: none; }
+body.matching #chip { display: flex; }
+.sw, .src { background-size: 100% 100%; image-rendering: pixelated; flex: none; }
+[data-z] { --c: var(--z-close); }
+[data-z=neutral] { --c: var(--z-neutral); }
+[data-z=accent] { --c: var(--z-accent); }
+button:disabled { opacity: .35; cursor: default !important; }
+body { display: flex; background: #858582; color: #1f2024; font: 13px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+#side { flex: none; width: 272px; background: #fafaf8; border-right: 1px solid #0002; display: flex; flex-direction: column; overflow: auto; }
+.top { padding: 20px 20px 6px; }
+.top h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 9px; }
+.logo { width: 20px; height: 20px; border-radius: 5px; background: conic-gradient(#e5484d, #f5a623, #f5d90a, #46a758, #0090ff, #8e4ec6, #e5484d); }
+.top p { margin: 4px 0 0; color: #868893; font-size: 12px; }
+section { padding: 14px 20px; border-top: 1px solid #eeeeea; }
+section:first-of-type { border-top: 0; }
+h2 { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: #868893; text-transform: uppercase; letter-spacing: .07em; }
+#views { display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; background: #eeeeeb; border-radius: 9px; }
+#views button { border: 0; background: none; padding: 6px 0; border-radius: 7px; cursor: pointer; color: #5d5f68; text-transform: capitalize; }
+#views button.on { background: #fff; color: #1f2024; font-weight: 600; box-shadow: 0 1px 3px #0002; }
+#layouts { display: flex; flex-direction: column; gap: 2px; }
+#layouts button { border: 0; background: none; text-align: left; padding: 7px 10px; border-radius: 8px; cursor: pointer; text-transform: capitalize; font-weight: 500; }
+#layouts button::after { display: block; font-weight: 400; font-size: 11.5px; color: #868893; text-transform: none; margin-top: 1px; }
+#layouts [data-v=reference]::after { content: "The original Reddit shape"; }
+#layouts [data-v=wheel]::after { content: "Hue around, dark center to light rim"; }
+#layouts [data-v=spectrum]::after { content: "Hue across, dark to light upward"; }
+#layouts [data-v=rows]::after { content: "One band per color family"; }
+#layouts [data-v=som]::after { content: "Similar blocks side by side"; }
+#layouts button:hover { background: #f0f0ed; }
+#layouts button.on { background: #1f2024; color: #fff; }
+#layouts button.on::after { color: #fff9; }
+#gaps { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 0; background: none; padding: 2px 0; cursor: pointer; text-align: left; }
+#gaps small { display: block; color: #868893; font-size: 11.5px; }
+#gaps i { flex: none; width: 34px; height: 20px; border-radius: 10px; background: #d9d9d4; position: relative; transition: background .2s; }
+#gaps i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; transition: transform .2s; }
+#gaps.on i { background: #30a46c; } #gaps.on i::after { transform: translateX(14px); }
+#sel { margin-top: auto; }
+#sel .empty { color: #a3a5ad; font-size: 12px; padding: 14px 0; text-align: center; border: 1.5px dashed #e2e2dd; border-radius: 10px; }
+#sel .card { display: none; }
+body.selecting #sel .empty { display: none; }
+body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap: 0 12px; align-items: center; }
+#sel .sw { width: 56px; height: 56px; border-radius: 8px; grid-row: span 2; box-shadow: inset 0 0 0 1px #0001; }
+#sel .name { font-weight: 600; font-size: 14px; text-transform: capitalize; align-self: end; }
+#sel .hex { align-self: start; }
+#sel .match { grid-column: span 2; }
+#sel .hex { font: 12px ui-monospace, Menlo, monospace; color: #868893; margin-top: 2px; }
+#sel .match, #tip .match { width: 100%; margin-top: 10px; border: 0; background: #1f2024; color: #fff; padding: 9px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+#sel .match:hover { background: #000; }
+#chip { flex-direction: column; gap: 4px; }
+#chip .head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+#chip .src { width: 36px; height: 36px; border-radius: 6px; box-shadow: 0 0 0 2px var(--z-src); }
+#chip .src-name { font-weight: 600; text-transform: capitalize; flex: 1; }
+#chip .x { border: 0; background: #eeeeeb; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; color: #5d5f68; }
+#chip .x:hover { background: #e2e2dd; color: #1f2024; }
+#chip [data-z] { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 5px 6px; border-radius: 7px; cursor: pointer; text-align: left; color: #868893; }
+#chip [data-z]:hover { background: #f0f0ed; }
+#chip [data-z]::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 4px; background: var(--c); opacity: .3; box-shadow: inset 0 0 0 1px #0002; }
+#chip [data-z].on { color: #1f2024; } #chip [data-z].on::before { opacity: 1; }
+#chip [data-z] small { display: block; font-size: 11px; color: #a3a5ad; }
+.matchsec { display: none; } body.matching .matchsec { display: block; }
+#wrap { flex: 1; min-width: 0; padding: 24px; }
+#map div.sel { outline: 2px solid #fff; outline-offset: 1px; box-shadow: 0 0 0 4px #0006; z-index: 3; }
+#tip { background: #1f2024f2; color: #fff; padding: 6px 10px; border-radius: 7px; max-width: min(92vw, 320px); box-shadow: 0 6px 20px #0004; }
+#tip .sw, #tip .hex { display: none; }
+#tip .name { text-transform: capitalize; }
+#tip .match { background: #fff; color: #1f2024; padding: 6px; margin-top: 6px; justify-content: center; }
+@media (min-width: 761px) { #tip.pinned { display: none !important; } }
+@media (max-width: 760px) {
+  body { flex-direction: column; }
+  #side { width: auto; border: 0; border-bottom: 1px solid #0002; overflow: visible; }
+  .top { padding: 12px 14px 4px; } .top p { display: none; }
+  .ctrls { display: flex; flex-wrap: wrap; gap: 0 14px; padding: 0 14px 10px; }
+  section { padding: 6px 0; border: 0; } h2 { display: none; }
+  #layouts { flex-direction: row; flex-wrap: wrap; } #layouts button { padding: 6px 9px; } #layouts button::after { display: none; }
+  #gaps small, #sel { display: none; }
+  .matchsec { position: fixed; z-index: 10; left: 8px; right: 8px; bottom: 8px; background: #fafaf8; border-radius: 12px; padding: 10px; box-shadow: 0 8px 30px #0005; }
+  #chip { flex-direction: row; flex-wrap: wrap; } #chip .head { width: 100%; } #chip [data-z] small { display: none; }
+  #wrap { padding: 8px; }
+}
 </style>
 </head>
 <body>
-<div id="bar"><div class="seg" id="views"></div><div class="seg" id="layouts"></div>
-  <div class="seg"><button id="gaps" title="leave empty space where no block has the colors">gaps</button></div></div>
+<aside id="side">
+  <div class="top"><h1><span class="logo"></span>Block colors</h1><p>Minecraft <span id="version"></span> · <span id="count"></span></p></div>
+  <div class="ctrls">
+    <section><h2>Face</h2><div id="views"></div></section>
+    <section><h2>Layout</h2><div id="layouts"></div></section>
+    <section><button id="gaps"><span>Show gaps<small>Empty space where no block has the color</small></span><i></i></button></section>
+  </div>
+  <section class="matchsec"><h2>Matching</h2>
+    <div id="chip"><div class="head"><div class="src"></div><div class="src-name"></div><button class="x">Clear</button></div>
+      <button data-z="close"><span>Similar hue<small>Same hue ±30°, any lightness</small></span></button>
+      <button data-z="neutral"><span>Neutrals<small>Grays, whites and blacks</small></span></button>
+      <button data-z="accent"><span>Accent<small>The opposite hue</small></span></button></div>
+  </section>
+  <section id="sel"><h2>Selected</h2>
+    <div class="empty">Click a block to inspect it</div>
+    <div class="card"><div class="sw"></div><div class="name"></div><div class="hex"></div><button class="match">Find matching blocks</button></div>
+  </section>
+</aside>
 <div id="wrap"><div id="map"></div></div>
-<div id="tip"><span></span><button>match</button></div>
-<div id="chip"><div class="src"></div>
-  <button data-z="close" title="closest colors" style="color:#ffb02e"></button>
-  <button data-z="neutral" title="neutrals" style="color:#f4f4f0"></button>
-  <button data-z="accent" title="accent (opposite side)" style="color:#2ee6f0"></button>
-  <button class="x" title="stop matching">✕</button></div>
+<div id="tip"><div class="name"></div><div class="hex"></div><button class="match">Find matches</button></div>
 <script>
 const D = /*DATA*/null;
 const VIEWS = Object.keys(D.views);
 const LAYOUTS = ["reference", "wheel", "spectrum", "rows", "som"].filter(l => l in D.views.side.layouts);
 let view = "side", layout = LAYOUTS[0], sel = null;
-// layouts with a "<name>-gaps" variant can be toggled to it
 let gaps = false;
 const hasGaps = () => layout + "-gaps" in D.views[view].layouts;
-// match mode: a tile from any view whose color the current view is compared against
 let match = null, zones = { close: true, neutral: false, accent: false };
 try { ({ match, zones } = JSON.parse(localStorage.getItem("cmap-match")) || { match, zones }); } catch (e) {}
 
-// one css class per texture, so each data url is parsed once
 document.head.insertAdjacentHTML("beforeend", "<style>" +
   D.tex.map((b, i) => `.t${i}{background-image:url(data:image/png;base64,${b})}`).join("") + "</style>");
 
-const map = document.getElementById("map"), tip = document.getElementById("tip");
-// each view has its own tiles (a log shows rings and bark on top), so they are rebuilt when the view changes
+const $ = s => document.querySelector(s);
+$("#version").textContent = D.version;
+const map = $("#map"), tip = $("#tip"), wrap = $("#wrap");
 let tiles = [], tilesView = null;
 function build() {
   map.replaceChildren();
@@ -89,7 +161,8 @@ function buttons(id, items, get, set) {
   const el = document.getElementById(id);
   for (const it of items) {
     const btn = document.createElement("button");
-    btn.textContent = it;
+    btn.textContent = it === "som" ? "SOM" : it;
+    btn.dataset.v = it;
     btn.onclick = () => { set(it); el.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === btn)); draw(); };
     btn.classList.toggle("on", it === get());
     el.appendChild(btn);
@@ -97,13 +170,15 @@ function buttons(id, items, get, set) {
 }
 buttons("views", VIEWS, () => view, v => { if (v !== view) select(null); view = v; });
 buttons("layouts", LAYOUTS, () => layout, v => layout = v);
-const gapsBtn = document.getElementById("gaps");
+const gapsBtn = $("#gaps");
 gapsBtn.onclick = () => { gaps = !gaps; draw(); };
 
 function draw() {
   const V = D.views[view], L = V.layouts[gaps && hasGaps() ? layout + "-gaps" : layout];
   gapsBtn.disabled = !hasGaps();
   gapsBtn.classList.toggle("on", gaps && hasGaps());
+  gapsBtn.setAttribute("aria-pressed", gaps && hasGaps());
+  $("#count").textContent = V.t.length + " blocks";
   const fresh = tilesView !== view;
   if (fresh) build();
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -112,7 +187,9 @@ function draw() {
     y0 = Math.min(y0, L[i + 1]); y1 = Math.max(y1, L[i + 1]);
   }
   const cols = x1 - x0 + 1, rows = y1 - y0 + 1;
-  const w = innerWidth - 12, h = innerHeight - document.getElementById("bar").offsetHeight - 12;
+  const cs = getComputedStyle(wrap);
+  const w = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const h = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   // phones: fit the width and scroll; wide screens: fit the whole map
   const cell = Math.max(8, Math.floor(w < 700 ? w / cols : Math.min(w / cols, h / rows)));
   map.style.width = cols * cell + "px";
@@ -122,6 +199,7 @@ function draw() {
     e.style.width = e.style.height = cell + "px";
     e.style.transform = `translate(${(L[2 * i] - x0) * cell}px,${(L[2 * i + 1] - y0) * cell}px)`;
   });
+  map.style.setProperty("--cell", cell + "px");
   map.style.setProperty("--b", Math.max(1, Math.round(cell / 24)) + "px");
   map.style.setProperty("--m", Math.max(4, Math.round(cell / 5)) + "px");
   if (fresh) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
@@ -133,16 +211,31 @@ function lch(L, a, b) {
   return [L, Math.hypot(a, b), (Math.atan2(b, a) * 180 / Math.PI + 360) % 360];
 }
 
-// zones relative to the matched color: closest = same hue slice (±30°, any lightness), neutrals = the grays,
-// accent = the opposite hue slice. A gray source has no hue, so its closest zone is the grays.
+// OKLab (×1000) -> #rrggbb
+function hex(L, a, b) {
+  L /= 1000; a /= 1000; b /= 1000;
+  const l = (L + .3963377774 * a + .2158037573 * b) ** 3, m = (L - .1055613458 * a - .0638541728 * b) ** 3,
+        s = (L - .0894841775 * a - 1.291485548 * b) ** 3;
+  const lin = [4.0767416621 * l - 3.3077115913 * m + .2309699292 * s,
+               -1.2684380046 * l + 2.6097574011 * m - .3413193965 * s,
+               -.0041960863 * l - .7034186147 * m + 1.707614701 * s];
+  return "#" + lin.map(v => {
+    v = Math.max(0, Math.min(1, v));
+    v = v <= .0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - .055;
+    return Math.round(v * 255).toString(16).padStart(2, "0");
+  }).join("");
+}
+const hexOf = i => { const C = D.views[view].c; return hex(C[3 * i], C[3 * i + 1], C[3 * i + 2]); };
+
 function applyMatch() {
-  const chip = document.getElementById("chip");
+  const chip = $("#chip");
   try { localStorage.setItem("cmap-match", JSON.stringify({ match, zones })); } catch (e) {}
   map.classList.toggle("matching", !!match);
-  chip.style.display = match ? "flex" : "none";
+  document.body.classList.toggle("matching", !!match);
   if (!match) { tiles.forEach(e => e.classList.remove("on", "z-close", "z-neutral", "z-accent", "z-src")); return; }
   chip.querySelector(".src").className = "src t" + match.t;
-  chip.querySelectorAll("[data-z]").forEach(b => b.classList.toggle("on", zones[b.dataset.z]));
+  if (chip.querySelector(".src-name")) chip.querySelector(".src-name").textContent = match.n || "";
+  chip.querySelectorAll("[data-z]").forEach(b => { b.classList.toggle("on", zones[b.dataset.z]); b.setAttribute("aria-pressed", zones[b.dataset.z]); });
   const [, sC, sH] = lch(...match.c), G = D.gray * 1000, C = D.views[view].c;
   tiles.forEach((e, i) => {
     const [, c, h] = lch(C[3 * i], C[3 * i + 1], C[3 * i + 2]);
@@ -159,35 +252,48 @@ function applyMatch() {
   });
 }
 
-document.querySelector("#tip button").onclick = () => {
+function startMatch() {
   const V = D.views[view];
-  match = { t: V.t[sel], c: V.c.slice(3 * sel, 3 * sel + 3) };
+  match = { t: V.t[sel], c: V.c.slice(3 * sel, 3 * sel + 3), n: V.n[sel] };
   select(null);
   applyMatch();
-};
+}
+document.querySelectorAll("button.match").forEach(b => b.onclick = startMatch);
 document.querySelectorAll("#chip [data-z]").forEach(b => b.onclick = () => { zones[b.dataset.z] = !zones[b.dataset.z]; applyMatch(); });
-document.querySelector("#chip .x").onclick = () => { match = null; applyMatch(); };
+$("#chip .x").onclick = () => { match = null; applyMatch(); };
+
+function fill(root, i) {
+  if (!root) return;
+  const set = (s, f) => root.querySelectorAll(s).forEach(f);
+  set(".name", e => e.textContent = D.views[view].n[i]);
+  set(".hex", e => e.textContent = hexOf(i));
+  set(".sw", e => e.className = "sw t" + D.views[view].t[i]);
+}
 
 function show(i, x, y) {
-  tip.firstChild.textContent = D.views[view].n[i];
+  fill(tip, i);
   tip.style.display = "block";
   tip.style.left = Math.max(4, Math.min(x, innerWidth - tip.offsetWidth - 4)) + "px";
-  tip.style.top = Math.max(4, y) + "px";
+  tip.style.top = Math.max(4, Math.min(y, innerHeight - tip.offsetHeight - 4)) + "px";
 }
 
 function pin() {
   if (sel === null) return;
   const r = tiles[sel].getBoundingClientRect();
   show(sel, 0, 0);
-  show(sel, r.left + r.width / 2 - tip.offsetWidth / 2, r.top - tip.offsetHeight - 6);
+  const above = r.top - tip.offsetHeight - 8;
+  tip.classList.toggle("below", above < 4);
+  show(sel, r.left + r.width / 2 - tip.offsetWidth / 2, above < 4 ? r.bottom + 8 : above);
 }
 
 function select(i) {
   if (sel !== null) tiles[sel].classList.remove("sel");
   sel = i;
   tip.classList.toggle("pinned", sel !== null);
+  document.body.classList.toggle("selecting", sel !== null);
   if (sel === null) { tip.style.display = "none"; return; }
   tiles[sel].classList.add("sel");
+  fill($("#sel"), sel);
   pin();
 }
 
@@ -201,9 +307,11 @@ map.addEventListener("pointerleave", () => { if (sel === null) tip.style.display
 document.addEventListener("click", e => {
   const i = e.target.dataset ? e.target.dataset.i : undefined;
   if (i !== undefined) select(+i === sel ? null : +i);
-  else if (!e.target.closest("#bar, #tip, #chip")) select(null);
+  else if (!e.target.closest("#bar, #tip, #chip, #sel, #side, nav")) select(null);
 });
+addEventListener("keydown", e => { if (e.key === "Escape") select(null); });
 addEventListener("scroll", pin, { passive: true });
+wrap.addEventListener("scroll", pin, { passive: true });
 addEventListener("resize", draw);
 draw();
 </script>

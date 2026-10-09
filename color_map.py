@@ -557,10 +557,10 @@ def png_b64(im):
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def write_html(views, path, gray_chroma):
+def write_html(views, path, gray_chroma, version):
     """One self-contained page: textures inlined as base64 PNGs, every view's tiles and layouts."""
     tex, tex_idx = [], {}
-    data = {"tex": tex, "gray": gray_chroma, "views": {}}
+    data = {"tex": tex, "gray": gray_chroma, "version": version, "views": {}}
     for view, (entries, layouts) in views.items():
         t = []
         for e in entries:
@@ -621,7 +621,7 @@ def main():
     with open(os.path.join(args.out, f"colors-{args.version}.json"), "w") as f:
         json.dump(data, f, indent=1)
     html = os.path.join(args.out, f"color-map-{args.version}.html")
-    write_html(html_views, html, args.gray_chroma)
+    write_html(html_views, html, args.gray_chroma, args.version)
     print(f"-> {html} ({os.path.getsize(html) // 1024} KB)")
 
 if __name__ == "__main__":
