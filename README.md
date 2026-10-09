@@ -1,6 +1,6 @@
 # mc-texture-color-map
 
-A few years ago, I saw [this reddit post](https://www.reddit.com/r/Minecraft/comments/14jrc92/created_a_full_color_palette_for_all_the_blocks/) and found it fascinating. A few days ago, while playing minecraft, that post came back to my mind and I thought that it would be cool to have that updated and a bit more user-friendly. So I created this tool.
+A few years ago, I saw [this reddit post](https://www.reddit.com/r/Minecraft/comments/14jrc92/created_a_full_color_palette_for_all_the_blocks/) and found it fascinating. A few days ago, while playing minecraft, that post came back to my mind and I thought that it would be cool to have that updated and a bit more user-friendly. So I created this tool. It's not an exact replica of the original image, but it has a few new things that make it useful.
 
 # "The Slop Line"
 
