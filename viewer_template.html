@@ -137,7 +137,6 @@ let gaps = false;
 const hasGaps = () => layout + "-gaps" in D.views[view].layouts;
 const ALL_ZONES = () => ({ close: true, neutral: true, accent: true });
 let match = null, zones = ALL_ZONES();
-try { ({ match, zones } = JSON.parse(localStorage.getItem("cmap-match")) || { match, zones }); } catch (e) {}
 
 document.head.insertAdjacentHTML("beforeend", "<style>" +
   D.tex.map((b, i) => `.t${i}{background-image:url(data:image/png;base64,${b})}`).join("") + "</style>");
@@ -158,24 +157,25 @@ function build() {
   tilesView = view;
 }
 
-function buttons(id, items, get, set) {
+function buttons(id, items, set) {
   const el = document.getElementById(id);
   for (const it of items) {
     const btn = document.createElement("button");
     btn.textContent = it === "som" ? "SOM" : it;
     btn.dataset.v = it;
-    btn.onclick = () => { set(it); el.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === btn)); draw(); };
-    btn.classList.toggle("on", it === get());
+    btn.onclick = () => { set(it); draw(); };
     el.appendChild(btn);
   }
 }
-buttons("views", VIEWS, () => view, v => { if (v !== view) select(null); view = v; });
-buttons("layouts", LAYOUTS, () => layout, v => layout = v);
+buttons("views", VIEWS, v => { if (v !== view) select(null); view = v; });
+buttons("layouts", LAYOUTS, v => layout = v);
 const gapsBtn = $("#gaps");
 gapsBtn.onclick = () => { gaps = !gaps; draw(); };
 
 function draw() {
   const V = D.views[view], L = V.layouts[gaps && hasGaps() ? layout + "-gaps" : layout];
+  document.querySelectorAll("#views button").forEach(b => b.classList.toggle("on", b.dataset.v === view));
+  document.querySelectorAll("#layouts button").forEach(b => b.classList.toggle("on", b.dataset.v === layout));
   gapsBtn.disabled = !hasGaps();
   gapsBtn.classList.toggle("on", gaps && hasGaps());
   gapsBtn.setAttribute("aria-pressed", gaps && hasGaps());
@@ -206,6 +206,7 @@ function draw() {
   if (fresh) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
   if (fresh) applyMatch();
   if (sel !== null) setTimeout(pin, 520);
+  writeHash();
 }
 
 function lch(L, a, b) {
@@ -230,7 +231,7 @@ const hexOf = i => { const C = D.views[view].c; return hex(C[3 * i], C[3 * i + 1
 
 function applyMatch() {
   const chip = $("#chip");
-  try { localStorage.setItem("cmap-match", JSON.stringify({ match, zones })); } catch (e) {}
+  writeHash();
   map.classList.toggle("matching", !!match);
   document.body.classList.toggle("matching", !!match);
   if (!match) { tiles.forEach(e => e.classList.remove("on", "z-close", "z-neutral", "z-accent", "z-src")); return; }
@@ -253,9 +254,14 @@ function applyMatch() {
   });
 }
 
+// the matched tile is kept with its view and index, so the url can point back to it
+function matchOf(v, i) {
+  const V = D.views[v];
+  return { v, i, t: V.t[i], c: V.c.slice(3 * i, 3 * i + 3), n: V.n[i] };
+}
+
 function startMatch() {
-  const V = D.views[view];
-  match = { t: V.t[sel], c: V.c.slice(3 * sel, 3 * sel + 3), n: V.n[sel] };
+  match = matchOf(view, sel);
   zones = ALL_ZONES();
   select(null);
   applyMatch();
@@ -292,6 +298,7 @@ function select(i) {
   if (sel !== null) tiles[sel].classList.remove("sel");
   sel = i;
   tip.classList.toggle("pinned", sel !== null);
+  writeHash();
   document.body.classList.toggle("selecting", sel !== null);
   if (sel === null) { tip.style.display = "none"; return; }
   tiles[sel].classList.add("sel");
@@ -315,7 +322,43 @@ addEventListener("keydown", e => { if (e.key === "Escape") select(null); });
 addEventListener("scroll", pin, { passive: true });
 wrap.addEventListener("scroll", pin, { passive: true });
 addEventListener("resize", draw);
-draw();
+
+// the whole state lives in the url hash (#view=top&layout=wheel&gaps=1&match=side.12&zones=close,accent&sel=40),
+// so reloading or sharing the link reopens the same map. Defaults are left out.
+function writeHash() {
+  const q = [];
+  if (view !== "side") q.push("view=" + view);
+  if (layout !== LAYOUTS[0]) q.push("layout=" + layout);
+  if (gaps) q.push("gaps=1");
+  if (match) q.push("match=" + match.v + "." + match.i);
+  if (match && !Object.values(zones).every(Boolean)) q.push("zones=" + Object.keys(zones).filter(k => zones[k]).join(","));
+  if (sel !== null) q.push("sel=" + sel);
+  history.replaceState(null, "", q.length ? "#" + q.join("&") : location.pathname + location.search);
+}
+
+function readHash() {
+  const q = new URLSearchParams(location.hash.slice(1));
+  const tile = (v, i) => v in D.views && /^\d+$/.test(i) && +i < D.views[v].t.length;
+  view = VIEWS.includes(q.get("view")) ? q.get("view") : "side";
+  layout = LAYOUTS.includes(q.get("layout")) ? q.get("layout") : LAYOUTS[0];
+  gaps = q.get("gaps") === "1";
+  const [mv, mi] = (q.get("match") || "").split(".");
+  match = tile(mv, mi) ? matchOf(mv, +mi) : null;
+  zones = ALL_ZONES();
+  if (q.has("zones")) for (const k in zones) zones[k] = q.get("zones").split(",").includes(k);
+  return tile(view, q.get("sel")) ? +q.get("sel") : null;
+}
+
+function load() {
+  if (sel !== null) tiles[sel].classList.remove("sel");
+  sel = null;
+  const s = readHash();
+  draw();
+  applyMatch();
+  select(s);
+}
+addEventListener("hashchange", load);
+load();
 </script>
 </body>
 </html>
