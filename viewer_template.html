@@ -121,11 +121,15 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   .ctrls { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 10px; }
   section { padding: 0; border: 0; } h2 { display: none; }
   #layouts { flex-direction: row; gap: 0; padding: 3px; background: #eeeeeb; border-radius: 9px; }
-  #layouts button { flex: 1 1 auto; padding: 6px 2px; text-align: center; border-radius: 7px; color: #5d5f68; font-weight: 400; }
+  #layouts button { flex: 1 1 auto; padding: 10px 2px; text-align: center; border-radius: 7px; color: #5d5f68; font-weight: 400; }
   #layouts button::after { display: none; }
   #layouts button:hover { background: none; }
   #layouts button.on { background: #fff; color: #1f2024; font-weight: 600; box-shadow: 0 1px 3px #0002; }
-  .info { display: grid; }
+  /* thumb-sized targets: ~40px rows, and a bigger hit area than the small info icon */
+  #views button { padding: 10px 0; }
+  .gaprow { min-height: 40px; } #gaps { padding: 10px 0; }
+  .info { display: grid; position: relative; }
+  .info::after { content: ""; position: absolute; inset: -11px; }
   /* the description is one tap away on phones */
   /* a popover over the map, so opening it doesn't push the map down */
   .gapsec { position: relative; }
@@ -140,7 +144,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   #tip.pinned .hex::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--hex); box-shadow: 0 0 0 1px #fff5; }
   .matchsec { position: fixed; z-index: 10; left: 8px; right: 8px; bottom: 8px; background: #fafaf8; border-radius: 12px; padding: 10px; box-shadow: 0 8px 30px #0005; }
   #chip { flex-direction: row; flex-wrap: wrap; } #chip .head { width: 100%; } #chip [data-z] small { display: none; }
-  #wrap { padding: 8px; min-height: 0; }
+  #wrap { padding: 8px; min-height: 0; place-items: start center; }
   /* room to scroll the last rows out from under the matching panel */
   body.matching #wrap { padding-bottom: calc(var(--panel, 100px) + 16px); }
 }
