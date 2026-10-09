@@ -387,7 +387,13 @@ document.addEventListener("click", e => {
   if (i !== undefined) select(+i === sel ? null : +i);
   else if (!e.target.closest("#bar, #tip, #chip, #sel, #side, nav")) select(null);
 });
-addEventListener("keydown", e => { if (e.key === "Escape") { select(null); showInfo(false); } });
+// Esc backs out one step at a time: the gaps popover, then the selection, then match mode
+addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (gapsInfo.classList.contains("open")) showInfo(false);
+  else if (sel !== null) select(null);
+  else if (match) { match = null; applyMatch(); }
+});
 addEventListener("scroll", pin, { passive: true });
 wrap.addEventListener("scroll", pin, { passive: true });
 addEventListener("resize", draw);
