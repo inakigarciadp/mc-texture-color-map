@@ -10,9 +10,11 @@ html, body { margin: 0; height: 100%; }
 body { --z-close: #ffb02e; --z-neutral: #f4f4f0; --z-accent: #2ee6f0; --z-src: #ff3b30; }
 button { font: inherit; color: inherit; }
 #wrap { overflow: auto; display: grid; place-items: center; }
-#map { position: relative; touch-action: manipulation; --b: 1px; --m: 6px; }
-#map div { position: absolute; left: 0; top: 0; background-size: 100% 100%; image-rendering: pixelated;
-           transition: transform .5s cubic-bezier(.3,.7,.2,1), opacity .25s, filter .25s; cursor: pointer; }
+#map { position: relative; touch-action: manipulation; --s: 1; --b: 1px; --m: 6px; }
+/* every tile is a 16px box placed and sized by its transform alone, so a layout change glides position and size together */
+#map div { position: absolute; left: 0; top: 0; width: 16px; height: 16px; transform-origin: 0 0;
+           background-size: 100% 100%; image-rendering: pixelated;
+           transition: transform .4s cubic-bezier(.3,.7,.2,1), opacity .2s ease; cursor: pointer; }
 #map div:hover { z-index: 2; }
 #map.matching div { opacity: .12; filter: grayscale(1); }
 #map.matching div.on { opacity: 1; filter: none; }
@@ -62,7 +64,7 @@ h2 { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: #868893; text-tr
 #layouts [data-v=spectrum]::after { content: "Hue across, dark to light upward"; }
 #layouts [data-v=rows]::after { content: "One band per color family"; }
 #layouts [data-v=som]::after { content: "Similar blocks side by side"; }
-#layouts button:hover { background: #f0f0ed; }
+@media (hover: hover) and (pointer: fine) { #layouts button:hover { background: #f0f0ed; } }
 #layouts button.on { background: #1f2024; color: #fff; }
 #layouts button.on::after { color: #fff9; }
 .gaprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -74,7 +76,7 @@ h2 { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: #868893; text-tr
   font: 600 11px/1 ui-serif, Georgia, serif; font-style: italic; cursor: pointer; padding: 0; place-items: center; }
 .info[aria-expanded=true] { background: #1f2024; border-color: #1f2024; color: #fff; }
 #gaps i { display: block; width: 34px; height: 20px; border-radius: 10px; background: #d9d9d4; position: relative; transition: background .2s; }
-#gaps i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; transition: transform .2s; }
+#gaps i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0003; transition: transform .2s cubic-bezier(.23,1,.32,1); }
 #gaps.on i { background: #30a46c; } #gaps.on i::after { transform: translateX(14px); }
 #sel .empty { color: #a3a5ad; font-size: 12px; padding: 14px 0; text-align: center; border: 1.5px dashed #e2e2dd; border-radius: 10px; }
 #sel .card { display: none; }
@@ -86,24 +88,26 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 #sel .match { grid-column: span 2; }
 #sel .hex { font: 12px ui-monospace, Menlo, monospace; color: #868893; margin-top: 2px; }
 #sel .match, #tip .match { width: 100%; margin-top: 10px; border: 0; background: #1f2024; color: #fff; padding: 9px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-#sel .match:hover { background: #000; }
+@media (hover: hover) and (pointer: fine) { #sel .match:hover { background: #000; } }
 #chip { flex-direction: column; gap: 4px; }
 #chip .head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 #chip .src { width: 36px; height: 36px; border-radius: 6px; box-shadow: 0 0 0 2px var(--z-src); }
 #chip .src-name { font-weight: 600; text-transform: capitalize; flex: 1; }
 #chip .x { border: 0; background: #eeeeeb; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; color: #5d5f68; }
-#chip .x:hover { background: #e2e2dd; color: #1f2024; }
+@media (hover: hover) and (pointer: fine) { #chip .x:hover { background: #e2e2dd; color: #1f2024; } }
 #chip [data-z] { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 5px 6px; border-radius: 7px; cursor: pointer; text-align: left; color: #868893; }
 /* checkboxes: an empty box when off, the zone's color with a check when on */
 #chip [data-z]::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px #c4c5cb;
-  display: grid; place-items: center; font: 700 11px/1 system-ui, sans-serif; color: #1f2024; transition: background .15s; }
-#chip [data-z]:hover { color: #1f2024; } #chip [data-z]:hover::before { box-shadow: inset 0 0 0 1.5px #868893; }
+  display: grid; place-items: center; font: 700 11px/1 system-ui, sans-serif; color: #1f2024; }
+@media (hover: hover) and (pointer: fine) {
+  #chip [data-z]:hover { color: #1f2024; } #chip [data-z]:hover::before { box-shadow: inset 0 0 0 1.5px #868893; } }
 #chip [data-z].on { color: #1f2024; }
 #chip [data-z].on::before { content: "✓"; background: var(--c); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c), #000 30%); }
 #chip [data-z] small { display: block; font-size: 11px; color: #a3a5ad; }
 .matchsec { display: none; } body.matching .matchsec { display: block; }
 #wrap { flex: 1; min-width: 0; padding: 24px; }
-#map div.sel { outline: 2px solid #fff; outline-offset: 1px; box-shadow: 0 0 0 4px #0006; z-index: 3; }
+#map div.sel { box-shadow: 0 0 0 calc(1px / var(--s)) #0006, 0 0 0 calc(3px / var(--s)) #fff, 0 0 0 calc(4px / var(--s)) #0006;
+  z-index: 3; }
 #tip { background: #1f2024f2; color: #fff; padding: 6px 10px; border-radius: 7px; max-width: min(92vw, 320px); box-shadow: 0 6px 20px #0004; }
 #tip .sw, #tip .hex { display: none; }
 #tip .name { text-transform: capitalize; }
@@ -147,6 +151,11 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   #wrap { padding: 8px; min-height: 0; place-items: start center; }
   /* room to scroll the last rows out from under the matching panel */
   body.matching #wrap { padding-bottom: calc(var(--panel, 100px) + 16px); }
+}
+/* keep the dimming, drop the movement */
+@media (prefers-reduced-motion: reduce) {
+  #map div { transition: opacity .2s ease; }
+  #gaps i::after { transition: none; }
 }
 </style>
 </head>
@@ -230,7 +239,8 @@ function showInfo(open) {
 }
 info.onclick = () => showInfo(!gapsInfo.classList.contains("open"));
 
-function draw() {
+// instant skips the glide: a resize should follow the window, not trail it
+function draw(instant) {
   const V = D.views[view], L = V.layouts[gaps && hasGaps() ? layout + "-gaps" : layout];
   document.querySelectorAll("#views button").forEach(b => b.classList.toggle("on", b.dataset.v === view));
   document.querySelectorAll("#layouts button").forEach(b => b.classList.toggle("on", b.dataset.v === layout));
@@ -240,6 +250,7 @@ function draw() {
   $("#count").textContent = V.t.length + " blocks";
   const fresh = tilesView !== view;
   if (fresh) build();
+  instant = instant || fresh;
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (let i = 0; i < L.length; i += 2) {
     x0 = Math.min(x0, L[i]); x1 = Math.max(x1, L[i]);
@@ -251,20 +262,24 @@ function draw() {
   const w = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   const h = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   // phones: fit the width and scroll; wide screens: fit the whole map
-  const cell = Math.max(8, Math.floor(w < 700 ? w / cols : Math.min(w / cols, h / rows)));
-  map.style.width = cols * cell + "px";
-  map.style.height = rows * cell + "px";
+  const cell = Math.max(8, Math.floor(w < 700 ? w / cols : Math.min(w / cols, h / rows))), s = cell / 16;
+  // the map's box fills the space and keeps its corner put, with the centering inside each tile's move,
+  // so a layout change starts every tile from where it really was
+  const ox = Math.max(0, Math.floor((w - cols * cell) / 2));
+  const oy = w < 700 ? 0 : Math.max(0, Math.floor((h - rows * cell) / 2));
+  map.style.width = cols * cell + 2 * ox + "px";
+  map.style.height = rows * cell + 2 * oy + "px";
   tiles.forEach((e, i) => {
-    if (fresh) e.style.transition = "none";
-    e.style.width = e.style.height = cell + "px";
-    e.style.transform = `translate(${(L[2 * i] - x0) * cell}px,${(L[2 * i + 1] - y0) * cell}px)`;
+    if (instant) e.style.transition = "none";
+    e.style.transform = `translate(${ox + (L[2 * i] - x0) * cell}px,${oy + (L[2 * i + 1] - y0) * cell}px) scale(${s})`;
   });
-  map.style.setProperty("--cell", cell + "px");
-  map.style.setProperty("--b", Math.max(1, Math.round(cell / 24)) + "px");
-  map.style.setProperty("--m", Math.max(4, Math.round(cell / 5)) + "px");
-  if (fresh) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
+  // sizes inside the tiles are in unscaled px
+  map.style.setProperty("--s", s);
+  map.style.setProperty("--b", Math.max(1, Math.round(cell / 24)) / s + "px");
+  map.style.setProperty("--m", Math.max(4, Math.round(cell / 5)) / s + "px");
   if (fresh) applyMatch();
-  if (sel !== null) setTimeout(pin, 520);
+  if (instant) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
+  if (sel !== null) pin();
   writeHash();
 }
 
@@ -356,6 +371,9 @@ function pin() {
   if (tip.classList.contains("pinned") && !on) tip.style.display = "none";
   tip.classList.toggle("pinned", on);
   if (!on) return;
+  // while the tile is still gliding, hide the tooltip and pin it where the tile lands
+  const move = tiles[sel].getAnimations().find(a => a.transitionProperty === "transform");
+  if (move) { tip.style.display = "none"; move.finished.then(pin, () => {}); return; }
   const r = tiles[sel].getBoundingClientRect(), w = wrap.getBoundingClientRect(), panel = $(".matchsec");
   const top = w.top + 4;
   const bottom = (getComputedStyle(panel).position === "fixed" && match ? panel.getBoundingClientRect().top : w.bottom) - 4;
@@ -400,7 +418,7 @@ addEventListener("keydown", e => {
 });
 addEventListener("scroll", pin, { passive: true });
 wrap.addEventListener("scroll", pin, { passive: true });
-addEventListener("resize", draw);
+addEventListener("resize", () => draw(true));
 
 // the whole state lives in the url hash (#view=top&layout=wheel&gaps=1&match=side.12&zones=close,accent&sel=40),
 // so reloading or sharing the link reopens the same map. Defaults are left out.
