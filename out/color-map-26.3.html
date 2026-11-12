@@ -32,9 +32,11 @@ button { font: inherit; color: inherit; }
 /* search rings sit on a layer of their own, so they stay bright on tiles the match dims.
    The map stacks them inside itself, so popovers over the map stay on top */
 #map { isolation: isolate; }
+/* the green ring sits inside its tile, so rings on neighbouring tiles never overlap */
 #map div.ring, #map.matching div.ring { opacity: 1; filter: none; pointer-events: none; background: none; z-index: 6;
-  box-shadow: 0 0 0 calc(1px / var(--s)) #000c, 0 0 0 calc(3px / var(--s)) var(--hit), 0 0 0 calc(4px / var(--s)) #000c; }
-#map div.ring.cur { z-index: 7; box-shadow: 0 0 0 calc(1px / var(--s)) #000, 0 0 0 calc(4px / var(--s)) #fff, 0 0 0 calc(5px / var(--s)) #000; }
+  box-shadow: inset 0 0 0 calc(1px / var(--s)) #000c, inset 0 0 0 calc(3px / var(--s)) var(--hit), inset 0 0 0 calc(4px / var(--s)) #000c; }
+/* the tile you're on (the list row, or under the mouse) trades it for the white ring outside */
+#map div.ring.cur, #map div.ring.hover { z-index: 7; box-shadow: 0 0 0 calc(1px / var(--s)) #000, 0 0 0 calc(4px / var(--s)) #fff, 0 0 0 calc(5px / var(--s)) #000; }
 /* a ring that closes in on the tile once, so a tiny tile is easy to spot (once typing pauses) */
 #map div.ring::after { content: ""; position: absolute; inset: 0; border-radius: 2px;
   box-shadow: 0 0 0 calc(3px / var(--s)) var(--hit); opacity: 0; }
@@ -515,12 +517,17 @@ function select(i) {
 }
 
 map.addEventListener("pointermove", e => {
-  if (e.pointerType !== "mouse" || tip.classList.contains("pinned")) return;
+  if (e.pointerType !== "mouse") return;
   const i = e.target.dataset.i;
+  rings.forEach((r, k) => r.classList.toggle("hover", ringIds[k] === +i));
+  if (tip.classList.contains("pinned")) return;
   if (i === undefined) tip.style.display = "none";
   else show(+i, e.clientX + 14, e.clientY + 16);
 });
-map.addEventListener("pointerleave", () => { if (!tip.classList.contains("pinned")) tip.style.display = "none"; });
+map.addEventListener("pointerleave", () => {
+  rings.forEach(r => r.classList.remove("hover"));
+  if (!tip.classList.contains("pinned")) tip.style.display = "none";
+});
 document.addEventListener("click", e => {
   if (!e.target.closest(".info")) showInfo(false);
   const i = e.target.dataset ? e.target.dataset.i : undefined;
