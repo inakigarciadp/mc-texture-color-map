@@ -35,9 +35,10 @@ button { font: inherit; color: inherit; }
 #map div.ring, #map.matching div.ring { opacity: 1; filter: none; pointer-events: none; background: none; z-index: 6;
   box-shadow: 0 0 0 calc(1px / var(--s)) #000c, 0 0 0 calc(3px / var(--s)) var(--hit), 0 0 0 calc(4px / var(--s)) #000c; }
 #map div.ring.cur { z-index: 7; box-shadow: 0 0 0 calc(1px / var(--s)) #000, 0 0 0 calc(4px / var(--s)) #fff, 0 0 0 calc(5px / var(--s)) #000; }
-/* a ring that closes in on the tile once, so a tiny tile is easy to spot */
+/* a ring that closes in on the tile once, so a tiny tile is easy to spot (once typing pauses) */
 #map div.ring::after { content: ""; position: absolute; inset: 0; border-radius: 2px;
-  box-shadow: 0 0 0 calc(3px / var(--s)) var(--hit); opacity: 0; animation: ping .5s var(--ease-out); }
+  box-shadow: 0 0 0 calc(3px / var(--s)) var(--hit); opacity: 0; }
+#map div.ring.ping::after { animation: ping .5s var(--ease-out); }
 @keyframes ping { from { transform: scale(3); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1); opacity: 0; } }
 #tip { position: fixed; z-index: 20; pointer-events: none; display: none; }
 #tip.pinned { pointer-events: auto; }
@@ -240,7 +241,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 /* keep the dimming and fades, drop the movement */
 @media (prefers-reduced-motion: reduce) {
   #map div { transition: opacity .2s ease; }
-  #map div.ring::after { animation: none; }
+  #map div.ring.ping::after { animation: none; }
   #gaps i::after, #views::before, #layouts::before { transition: none; }
   #tip.pinned, #gapsinfo, .matchsec { transform: none; }
   @starting-style { #tip.pinned, #gapsinfo.open, body.matching .matchsec { transform: none; } }
@@ -595,7 +596,13 @@ function choose(k) {
   const r = tiles[i].getBoundingClientRect(), w = wrap.getBoundingClientRect();
   if (r.top < w.top || r.bottom > w.bottom || r.left < w.left || r.right > w.right) tiles[i].scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
 }
-q.addEventListener("input", () => { act = 0; find(); });
+// the rings follow every keystroke, but they ping only once typing pauses, not on each letter
+q.addEventListener("input", () => {
+  act = 0; find();
+  clearTimeout(pingTimer);
+  rings.forEach(r => r.classList.remove("ping"));
+  pingTimer = setTimeout(() => rings.forEach(r => r.classList.add("ping")), 300);
+});
 q.addEventListener("focus", find);
 q.addEventListener("blur", () => setTimeout(find, 0));
 q.addEventListener("keydown", e => {
@@ -611,7 +618,7 @@ results.addEventListener("pointerdown", e => { const r = e.target.closest(".res"
 results.addEventListener("pointermove", e => { const r = e.target.closest(".res"); if (r && +r.dataset.k !== act) { act = +r.dataset.k; find(); } });
 
 // one ring per hit; the current row's tiles get a white ring and keep their colors in match mode
-let rings = [], ringIds = [], ringCur = new Set();
+let rings = [], ringIds = [], ringCur = new Set(), pingTimer;
 function ring(ids, cur) {
   ids = [...new Set(ids)];
   const same = ids.length === ringIds.length && ids.every((v, k) => v === ringIds[k]);
