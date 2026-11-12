@@ -10,6 +10,21 @@ html, body { margin: 0; height: 100%; }
 body { --hit: #c6ff3d; --z-close: #ffb02e; --z-neutral: #f4f4f0; --z-accent: #2ee6f0; --z-src: #ff3b30;
        --ease-out: cubic-bezier(.23,1,.32,1); --ease-drawer: cubic-bezier(.32,.72,0,1); }
 button { font: inherit; color: inherit; }
+/* a visible ring wherever the keyboard is; the map shows its focus through the selected tile instead */
+:focus-visible { outline: 2px solid #1f2024; outline-offset: 2px; }
+#map:focus-visible { outline: none; }
+body:not(.selecting) #map:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 4px; }
+/* key hints (.k badges, .kh text) show only where there's a keyboard: a mouse-first device, or anyone who
+   has pressed a shortcut (a tablet with a keyboard) */
+.k { font: 600 10.5px/1 ui-monospace, Menlo, monospace; color: #868893; border: 1px solid #dcdcd7; border-bottom-width: 2px;
+  border-radius: 4px; padding: 2px 5px; background: #fff; text-transform: none; letter-spacing: 0; }
+.k, .kh { display: none; }
+@media (hover: hover) and (pointer: fine) { .k { display: inline-block; } .kh { display: inline; } }
+body.kbd .k { display: inline-block; } body.kbd .kh { display: inline; }
+h2 .k, .gaplbl .k { margin-left: 2px; padding: 1px 4px; font-size: 9.5px; vertical-align: 1px; }
+.match .k { margin-left: 6px; background: #fff2; border-color: #fff3; color: #fffc; }
+#tip .match .k { background: #fff; border-color: #dcdcd7; color: #868893; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #wrap { overflow: auto; display: grid; place-items: center; }
 #map { position: relative; touch-action: manipulation; --s: 1; --b: 1px; --m: 6px; }
 /* every tile is a 16px box placed and sized by its transform alone, so a layout change glides position and size together */
@@ -109,9 +124,13 @@ body.selecting #sel .empty { display: none; }
 body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap: 0 12px; align-items: center; }
 #sel .sw { width: 56px; height: 56px; border-radius: 8px; grid-row: span 2; box-shadow: inset 0 0 0 1px #0001; }
 #sel .name { font-weight: 600; font-size: 14px; text-transform: capitalize; align-self: end; }
-#sel .hex { align-self: start; }
+#sel .hexrow { align-self: start; display: flex; align-items: center; gap: 8px; margin-top: 2px; }
 #sel .match { grid-column: span 2; }
-#sel .hex { font: 12px ui-monospace, Menlo, monospace; color: #868893; margin-top: 2px; }
+#sel .hex { font: 12px ui-monospace, Menlo, monospace; color: #868893; }
+#sel .copy { border: 0; background: #eeeeeb; border-radius: 6px; padding: 3px 7px; cursor: pointer; font-size: 11.5px; color: #5d5f68;
+  display: inline-flex; align-items: center; gap: 5px; }
+#sel .copy .k { padding: 1px 4px; font-size: 9.5px; }
+@media (hover: hover) and (pointer: fine) { #sel .copy:hover { background: #e2e2dd; color: #1f2024; } }
 #sel .match, #tip .match { width: 100%; margin-top: 10px; border: 0; background: #1f2024; color: #fff; padding: 9px; border-radius: 8px; cursor: pointer; font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { #sel .match:hover { background: #000; } }
 #chip { flex-direction: column; gap: 4px; }
@@ -129,6 +148,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 #chip [data-z].on { color: #1f2024; }
 #chip [data-z].on::before { content: "✓"; background: var(--c); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c), #000 30%); }
 #chip [data-z] small { display: block; font-size: 11px; color: #a3a5ad; }
+#chip [data-z] .k { margin-left: auto; align-self: center; }
 .matchsec { display: none; } body.matching .matchsec { display: block; }
 /* the disclaimer and source link sit quietly at the foot of the sidebar */
 .foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -136,6 +156,29 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 .foot a { display: inline-flex; align-items: center; gap: 5px; color: inherit; text-decoration: none; border-radius: 4px; position: relative; }
 .foot svg { width: 13px; height: 13px; fill: currentColor; flex: none; }
 @media (hover: hover) and (pointer: fine) { .foot a:hover { color: #1f2024; } }
+.foot .links { display: flex; align-items: center; gap: 12px; }
+/* wide screens: the disclaimer gets a line of its own, the links sit under it */
+@media (min-width: 761px) { .foot { flex-wrap: wrap; row-gap: 6px; } .foot > span:first-child { flex: 1 0 100%; } .foot .links { flex: 1; justify-content: space-between; } }
+.foot .keys { display: none; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; font-size: 11px; align-items: center; gap: 5px; border-radius: 4px; }
+.foot .keys .k { display: inline-block; padding: 1px 4px; font-size: 9.5px; }
+@media (hover: hover) and (pointer: fine) { .foot .keys { display: inline-flex; } .foot .keys:hover { color: #1f2024; } }
+body.kbd .foot .keys { display: inline-flex; }
+#keys { border: 0; border-radius: 14px; padding: 18px 20px 16px; width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+  background: #fafaf8; color: #1f2024; box-shadow: 0 20px 60px #0006; }
+#keys::backdrop { background: #0006; }
+#keys[open] { transition: opacity .15s var(--ease-out), transform .15s var(--ease-out); }
+@starting-style { #keys[open] { opacity: 0; transform: scale(.97); } }
+#keys .dh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+#keys h2 { margin: 0; font-size: 15px; color: #1f2024; text-transform: none; letter-spacing: -.01em; }
+#keys .x { border: 0; background: #eeeeeb; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; color: #5d5f68; }
+#keys h3 { margin: 14px 0 4px; font-size: 11px; font-weight: 600; color: #868893; text-transform: uppercase; letter-spacing: .07em; }
+#keys dl { margin: 0; display: grid; grid-template-columns: 104px 1fr; gap: 6px 14px; align-items: center; }
+#keys dt { display: flex; gap: 3px; justify-content: flex-end; white-space: nowrap; color: #868893; font-size: 11px; }
+#keys dt .k { display: inline-block; }
+#keys dd { margin: 0; }
+#keys .opt { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding-top: 12px; border-top: 1px solid #eeeeea; cursor: pointer; }
+#keys .opt input { margin: 2px 0 0; accent-color: #1f2024; }
+#keys .opt small { display: block; color: #868893; font-size: 11.5px; margin-top: 2px; }
 #wrap { flex: 1; min-width: 0; padding: 24px; }
 /* find a block: a field above the controls and a list of blocks under it */
 .search { flex: none; padding: 4px 20px 10px; position: relative; }
@@ -145,9 +188,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 .field svg { width: 14px; height: 14px; flex: none; stroke: #868893; fill: none; stroke-width: 2; }
 .field input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit; font-size: 13px; color: #1f2024; padding: 0; }
 .field input::placeholder { color: #a3a5ad; }
-.field kbd { font: 600 10.5px/1 ui-monospace, Menlo, monospace; color: #868893; border: 1px solid #dcdcd7; border-bottom-width: 2px;
-  border-radius: 4px; padding: 2px 5px; background: #fff; }
-.field:focus-within kbd { display: none; }
+.field:focus-within .k { display: none; }
 #results { position: absolute; left: 12px; right: 12px; top: calc(100% - 4px); z-index: 30; background: #fff; border-radius: 10px; padding: 4px;
   box-shadow: 0 0 0 1px #0001, 0 10px 30px #0003; transform-origin: 50% 0;
   transition: opacity .15s var(--ease-out), transform .15s var(--ease-out); }
@@ -186,7 +227,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   .top { padding: 12px 14px 10px; } .top p { display: none; }
   .search { padding: 0 14px 10px; }
   /* 16px stops phones zooming in on focus */
-  .field { height: 40px; } .field input { font-size: 16px; } .field kbd, .res-foot span:not(:first-child) { display: none; }
+  .field { height: 40px; } .field input { font-size: 16px; }
   #results { left: 8px; right: 8px; }
   /* one full-width row per control, both choices as the same segmented control */
   .ctrls { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 10px; }
@@ -229,7 +270,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   #chip { flex-direction: row; flex-wrap: wrap; } #chip .head { width: 100%; } #chip [data-z] small { display: none; }
   /* on phones it shares the title row, on the right, and the link shrinks to its icon */
   .foot { position: absolute; top: 12px; right: 14px; height: 22px; padding: 0; border: 0; }
-  .foot .long, .foot a span { display: none; }
+  .foot .long, .foot a span, .foot .keys span { display: none; }
   .foot a::after { content: ""; position: absolute; inset: -11px; }
   #wrap { padding: 8px; min-height: 0; place-items: start center; }
   /* room to scroll the last rows out from under the matching panel */
@@ -239,8 +280,8 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 @media (prefers-reduced-motion: reduce) {
   #map div { transition: opacity .2s ease; }
   #gaps i::after, #views::before, #layouts::before { transition: none; }
-  #tip.pinned, #gapsinfo, .matchsec { transform: none; }
-  @starting-style { #tip.pinned, #gapsinfo.open, body.matching .matchsec { transform: none; } }
+  #tip.pinned, #gapsinfo, .matchsec, #keys[open] { transform: none; }
+  @starting-style { #tip.pinned, #gapsinfo.open, body.matching .matchsec, #keys[open] { transform: none; } }
 }
 </style>
 </head>
@@ -250,34 +291,57 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   <div class="search">
     <label class="field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
       <input id="q" placeholder="Find a block" spellcheck="false" autocomplete="off" enterkeyhint="search"
-        role="combobox" aria-label="Find a block" aria-controls="results" aria-expanded="false"><kbd>/</kbd></label>
+        role="combobox" aria-label="Find a block" aria-controls="results" aria-expanded="false" aria-keyshortcuts="/"><kbd class="k">/</kbd></label>
     <div id="results" role="listbox" hidden></div>
   </div>
   <div class="scroll">
   <div class="ctrls">
-    <section><h2>Face</h2><div id="views"></div></section>
-    <section><h2>Layout</h2><div id="layouts"></div></section>
+    <section><h2>Face <kbd class="k">F</kbd></h2><div id="views" role="radiogroup" aria-label="Face" aria-keyshortcuts="F Shift+F"></div></section>
+    <section><h2>Layout <kbd class="k">L</kbd></h2><div id="layouts" role="radiogroup" aria-label="Layout" aria-keyshortcuts="L Shift+L"></div></section>
     <section class="gapsec">
-      <div class="gaprow"><span class="gaplbl">Show gaps<button class="info" aria-expanded="false" aria-controls="gapsinfo" aria-label="What are gaps?">i</button></span>
-        <button id="gaps" aria-label="Show gaps"><i></i></button></div>
+      <div class="gaprow"><span class="gaplbl">Show gaps <kbd class="k">G</kbd><button class="info" aria-expanded="false" aria-controls="gapsinfo" aria-label="What are gaps?">i</button></span>
+        <button id="gaps" aria-label="Show gaps" aria-keyshortcuts="G"><i></i></button></div>
       <p id="gapsinfo">Empty space where no block has the color</p></section>
   </div>
   </div>
   <section class="matchsec"><h2>Matching</h2>
     <div id="chip"><div class="head"><div class="src"></div><div class="src-name"></div><button class="x">Clear</button></div>
-      <button data-z="close"><span>Similar hue<small>Same hue ±30°, any lightness</small></span></button>
-      <button data-z="neutral"><span>Neutrals<small>Grays, whites and blacks</small></span></button>
-      <button data-z="accent"><span>Accent<small>The opposite hue</small></span></button></div>
+      <button data-z="close" aria-keyshortcuts="1"><span>Similar hue<small>Same hue ±30°, any lightness</small></span><kbd class="k">1</kbd></button>
+      <button data-z="neutral" aria-keyshortcuts="2"><span>Neutrals<small>Grays, whites and blacks</small></span><kbd class="k">2</kbd></button>
+      <button data-z="accent" aria-keyshortcuts="3"><span>Accent<small>The opposite hue</small></span><kbd class="k">3</kbd></button></div>
   </section>
   <section id="sel"><h2>Selected</h2>
-    <div class="empty">Click a block to inspect it</div>
-    <div class="card"><div class="sw"></div><div class="name"></div><div class="hex"></div><button class="match">Find matching blocks</button></div>
+    <div class="empty">Click a block to inspect it<span class="kh">, or press an arrow key</span></div>
+    <div class="card"><div class="sw"></div><div class="name"></div>
+      <div class="hexrow"><span class="hex"></span><button class="copy" aria-keyshortcuts="C"><span>Copy</span><kbd class="k">C</kbd></button></div>
+      <button class="match" aria-keyshortcuts="Enter M">Find matching blocks<kbd class="k">↵</kbd></button></div>
   </section>
   <footer class="foot"><span>Not affiliated with Mojang<span class="long"> or Microsoft</span></span>
-    <a href="https://github.com/inakigarciadp/mc-texture-color-map" target="_blank" rel="noopener" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span>GitHub</span></a></footer>
+    <span class="links"><button class="keys" aria-keyshortcuts="Shift+?"><span>Shortcuts</span><kbd class="k">?</kbd></button>
+    <a href="https://github.com/inakigarciadp/mc-texture-color-map" target="_blank" rel="noopener" aria-label="Source on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span>GitHub</span></a></span></footer>
 </aside>
-<div id="wrap"><div id="map"></div></div>
-<div id="tip"><div class="name"></div><div class="hex"></div><button class="match">Find matches</button></div>
+<div id="wrap"><div id="map" tabindex="0" role="listbox" aria-label="Blocks"></div></div>
+<div id="tip"><div class="name"></div><div class="hex"></div><button class="match">Find matches<kbd class="k">↵</kbd></button></div>
+<div id="live" class="sr" aria-live="polite"></div>
+<dialog id="keys" aria-labelledby="keys-h">
+  <div class="dh"><h2 id="keys-h">Keyboard shortcuts</h2><button class="x" autofocus>Close</button></div>
+  <h3>Map</h3>
+  <dl><dt><kbd class="k">←</kbd><kbd class="k">↑</kbd><kbd class="k">→</kbd><kbd class="k">↓</kbd></dt><dd>Move between blocks</dd>
+    <dt><kbd class="k">Shift</kbd>+ arrows</dt><dd>Move 5 blocks at a time</dd>
+    <dt><kbd class="k">↵</kbd> or <kbd class="k">M</kbd></dt><dd>Find matching blocks</dd>
+    <dt><kbd class="k">C</kbd></dt><dd>Copy the hex color</dd>
+    <dt><kbd class="k">Esc</kbd></dt><dd>Back out: search, selection, then matching</dd></dl>
+  <h3>View</h3>
+  <dl><dt><kbd class="k">F</kbd></dt><dd>Next face <span style="color:#868893">(Shift for previous)</span></dd>
+    <dt><kbd class="k">L</kbd></dt><dd>Next layout <span style="color:#868893">(Shift for previous)</span></dd>
+    <dt><kbd class="k">G</kbd></dt><dd>Show gaps</dd>
+    <dt><kbd class="k">1</kbd><kbd class="k">2</kbd><kbd class="k">3</kbd></dt><dd>Similar hue, Neutrals, Accent (while matching)</dd></dl>
+  <h3>Search</h3>
+  <dl><dt><kbd class="k">/</kbd></dt><dd>Find a block</dd>
+    <dt><kbd class="k">↑</kbd><kbd class="k">↓</kbd> <kbd class="k">↵</kbd></dt><dd>Move through the results and pick one</dd>
+    <dt><kbd class="k">?</kbd></dt><dd>This list</dd></dl>
+  <label class="opt"><input type="checkbox" id="single"><span>Single-key shortcuts<small>The letter, number, / and ? keys. Turn them off if they get in the way of speech input or other tools. Arrows, Enter and Esc keep working.</small></span></label>
+</dialog>
 <script>
 const D = /*DATA*/null;
 const VIEWS = Object.keys(D.views);
@@ -294,13 +358,16 @@ document.head.insertAdjacentHTML("beforeend", "<style>" +
 const $ = s => document.querySelector(s);
 $("#version").textContent = D.version;
 const map = $("#map"), tip = $("#tip"), wrap = $("#wrap");
-let tiles = [], tilesView = null;
+let tiles = [], tilesView = null, curL = null;
 function build() {
   map.replaceChildren();
   tiles = D.views[view].t.map((t, i) => {
     const e = document.createElement("div");
     e.dataset.i = i;
+    e.id = "tile" + i;
     e.className = "t" + t;
+    e.setAttribute("role", "option");
+    e.setAttribute("aria-label", D.views[view].n[i] + ", " + hexOf(i));
     map.appendChild(e);
     return e;
   });
@@ -313,12 +380,15 @@ function buttons(id, items, set) {
     const btn = document.createElement("button");
     btn.textContent = it === "som" ? "SOM" : it;
     btn.dataset.v = it;
-    btn.onclick = () => { set(it); draw(); };
+    btn.setAttribute("role", "radio");
+    btn.onclick = () => set(it);
     el.appendChild(btn);
   }
 }
-buttons("views", VIEWS, v => { if (v !== view) select(null); view = v; });
-buttons("layouts", LAYOUTS, v => layout = v);
+const setView = v => { if (v !== view) select(null); view = v; draw(); };
+const setLayout = v => { layout = v; draw(); };
+buttons("views", VIEWS, setView);
+buttons("layouts", LAYOUTS, setLayout);
 const gapsBtn = $("#gaps");
 gapsBtn.onclick = () => { gaps = !gaps; draw(); };
 $(".gaplbl").onclick = e => { if (!e.target.closest(".info")) gapsBtn.click(); };
@@ -335,8 +405,13 @@ info.onclick = () => showInfo(!gapsInfo.classList.contains("open"));
 // instant skips the glide: a resize should follow the window, not trail it
 function draw(instant) {
   const V = D.views[view], L = V.layouts[gaps && hasGaps() ? layout + "-gaps" : layout];
-  document.querySelectorAll("#views button").forEach(b => b.classList.toggle("on", b.dataset.v === view));
-  document.querySelectorAll("#layouts button").forEach(b => b.classList.toggle("on", b.dataset.v === layout));
+  curL = L;
+  // radio groups: the checked option is the group's one tab stop, and the arrows move inside it
+  for (const [id, v] of [["views", view], ["layouts", layout]])
+    document.querySelectorAll(`#${id} button`).forEach(b => {
+      const on = b.dataset.v === v;
+      b.classList.toggle("on", on); b.setAttribute("aria-checked", on); b.tabIndex = on ? 0 : -1;
+    });
   // the pills slide on a click, and jump on load and resize
   const jump = instant || tilesView === null;
   for (const b of document.querySelectorAll("#views .on, #layouts .on")) {
@@ -454,10 +529,17 @@ function startMatch() {
   zones = ALL_ZONES();
   select(null);
   applyMatch();
+  map.focus({ preventScroll: true });
+  say("Matching " + match.n.split(", ")[0]);
+}
+function clearMatch() { match = null; applyMatch(); say("Matching off"); }
+function toggleZone(z) {
+  zones[z] = !zones[z]; applyMatch();
+  say(ZLABEL[z] + (zones[z] ? " on" : " off"));
 }
 document.querySelectorAll("button.match").forEach(b => b.onclick = startMatch);
-document.querySelectorAll("#chip [data-z]").forEach(b => b.onclick = () => { zones[b.dataset.z] = !zones[b.dataset.z]; applyMatch(); });
-$("#chip .x").onclick = () => { match = null; applyMatch(); };
+document.querySelectorAll("#chip [data-z]").forEach(b => b.onclick = () => toggleZone(b.dataset.z));
+$("#chip .x").onclick = () => { clearMatch(); map.focus({ preventScroll: true }); };
 
 function fill(root, i) {
   if (!root) return;
@@ -478,8 +560,10 @@ function show(i, x, y) {
 // matching panel, and hides while its tile is scrolled out of view
 // phones pin the tooltip to the selected tile; wide screens show the selection in the sidebar and keep hovering
 const phone = () => matchMedia("(max-width: 760px)").matches;
+// a selection made from the keyboard pins the tooltip on wide screens too, since the eyes are on the map
+let keyPin = false;
 function pin() {
-  const on = sel !== null && phone();
+  const on = sel !== null && (phone() || keyPin);
   if (tip.classList.contains("pinned") && !on) tip.style.display = "none";
   tip.classList.toggle("pinned", on);
   if (!on) return;
@@ -499,19 +583,23 @@ function pin() {
   show(sel, r.left + r.width / 2 - tip.offsetWidth / 2, up ? Math.max(top, above) : below);
 }
 
-function select(i) {
-  if (sel !== null) tiles[sel].classList.remove("sel");
+function select(i, key = false) {
+  if (sel !== null) { tiles[sel].classList.remove("sel"); tiles[sel].removeAttribute("aria-selected"); }
   sel = i;
+  keyPin = key;
   writeHash();
   document.body.classList.toggle("selecting", sel !== null);
-  if (sel === null) { tip.classList.remove("pinned"); tip.style.display = "none"; return; }
+  if (sel === null) { map.removeAttribute("aria-activedescendant"); tip.classList.remove("pinned"); tip.style.display = "none"; return; }
   tiles[sel].classList.add("sel");
+  tiles[sel].setAttribute("aria-selected", "true");
+  map.setAttribute("aria-activedescendant", tiles[sel].id);
   fill($("#sel"), sel);
   pin();
 }
 
 map.addEventListener("pointermove", e => {
   if (e.pointerType !== "mouse") return;
+  if (keyPin) { keyPin = false; pin(); } // the mouse takes over from the keyboard
   const i = e.target.dataset.i;
   rings.forEach((r, k) => r.classList.toggle("hover", ringIds[k] === +i));
   if (tip.classList.contains("pinned")) return;
@@ -526,19 +614,120 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".info")) showInfo(false);
   const i = e.target.dataset ? e.target.dataset.i : undefined;
   if (i !== undefined) select(+i === sel ? null : +i);
-  else if (!e.target.closest("#bar, #tip, #chip, #sel, #side, nav")) select(null);
+  else if (!e.target.closest("#bar, #tip, #chip, #sel, #side, nav, #keys")) select(null);
 });
-// Esc backs out one step at a time: the gaps popover, the search, then the selection, then match mode.
-// "/" jumps to the search from anywhere but a text field
-addEventListener("keydown", e => {
-  if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) {
-    e.preventDefault(); q.focus(); q.select(); return;
+// arrows on the map: the nearest tile in that direction, where a step sideways costs more than one ahead.
+// The tiles sit on a grid with holes (gaps, the wheel's disc), so it's a search, not a neighbour lookup
+function step(from, dx, dy) {
+  const L = curL, x = L[2 * from], y = L[2 * from + 1];
+  let best = from, score = Infinity;
+  for (let i = 0; i < tiles.length; i++) {
+    const ex = L[2 * i] - x, ey = L[2 * i + 1] - y;
+    const ahead = ex * dx + ey * dy, side = Math.abs(ex * dy - ey * dx);
+    if (ahead <= 0 || side > 2 * ahead) continue;
+    const s = ahead + 2.5 * side;
+    if (s < score) { score = s; best = i; }
   }
-  if (e.key !== "Escape") return;
-  if (gapsInfo.classList.contains("open")) showInfo(false);
-  else if (q.value) { q.value = ""; find(); }
-  else if (sel !== null) select(null);
-  else if (match) { match = null; applyMatch(); }
+  return best;
+}
+// with nothing selected, the arrows start from the matched block, or the tile nearest the middle
+function start() {
+  if (match && match.v === view) return match.i;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (let i = 0; i < curL.length; i += 2) {
+    x0 = Math.min(x0, curL[i]); x1 = Math.max(x1, curL[i]); y0 = Math.min(y0, curL[i + 1]); y1 = Math.max(y1, curL[i + 1]);
+  }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let best = 0, d = Infinity;
+  for (let i = 0; i < tiles.length; i++) {
+    const e = (curL[2 * i] - cx) ** 2 + (curL[2 * i + 1] - cy) ** 2;
+    if (e < d) { d = e; best = i; }
+  }
+  return best;
+}
+function moveKey(dx, dy, far) {
+  let i = sel;
+  if (i === null) i = start();
+  else for (let n = far ? 5 : 1; n--;) i = step(i, dx, dy);
+  if (document.activeElement !== map) map.focus({ preventScroll: true });
+  if (i === sel) return;
+  select(i, true);
+  tiles[i].scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+const live = $("#live");
+const say = t => { live.textContent = ""; requestAnimationFrame(() => live.textContent = t); };
+const cycle = (list, v, back) => list[(list.indexOf(v) + (back ? list.length - 1 : 1)) % list.length];
+const copyBtn = $("#sel .copy");
+let copyTimer;
+function copyHex() {
+  if (sel === null) return;
+  const h = hexOf(sel);
+  navigator.clipboard.writeText(h).then(() => {
+    say("Copied " + h);
+    copyBtn.firstChild.textContent = "Copied";
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => copyBtn.firstChild.textContent = "Copy", 1200);
+  }, () => say("Couldn't copy " + h));
+}
+copyBtn.onclick = copyHex;
+
+// the shortcuts list, and the switch for the single-key shortcuts (WCAG 2.1.4), remembered per browser
+const dlg = $("#keys"), single = $("#single");
+let singleOn = true;
+try { singleOn = localStorage.getItem("singleKeys") !== "off"; } catch {}
+single.checked = singleOn;
+single.onchange = () => { singleOn = single.checked; try { localStorage.setItem("singleKeys", singleOn ? "on" : "off"); } catch {} };
+$(".foot .keys").onclick = () => dlg.showModal();
+dlg.querySelector(".x").onclick = () => dlg.close();
+dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); }); // a click on the backdrop
+
+const typing = t => /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable;
+const ARROWS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+// Esc backs out one step at a time: the gaps popover, the search, then the selection, then match mode.
+// Shortcuts are ignored with Ctrl, Cmd or Alt held, so the browser's own keep working
+addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
+  if (dlg.open) { if (e.key === "?" && singleOn) { e.preventDefault(); dlg.close(); } return; }
+  // a keyboard is in use: show the key hints even on a touch-first device
+  document.body.classList.add("kbd");
+  const k = e.key, group = e.target.closest && e.target.closest("[role=radiogroup]");
+  if (k in ARROWS) {
+    e.preventDefault();
+    if (group) {
+      // radio groups move and pick in one go, and keep focus on the picked option
+      const [dx, dy] = ARROWS[k], list = group.id === "views" ? VIEWS : LAYOUTS, cur = group.id === "views" ? view : layout;
+      const v = cycle(list, cur, dx + dy < 0);
+      (group.id === "views" ? setView : setLayout)(v);
+      group.querySelector(`[data-v="${v}"]`).focus();
+    } else moveKey(...ARROWS[k], e.shiftKey);
+    return;
+  }
+  if (k === "Escape") {
+    if (gapsInfo.classList.contains("open")) showInfo(false);
+    else if (q.value) { q.value = ""; find(); }
+    else if (sel !== null) select(null);
+    else if (match) clearMatch();
+    return;
+  }
+  // Enter on the map matches; on a button it stays the button's own click
+  if (k === "Enter" && (e.target === map || e.target === document.body)) {
+    if (sel !== null) { e.preventDefault(); startMatch(); }
+    return;
+  }
+  if (!singleOn || k.length !== 1) return;
+  const key = k.toLowerCase();
+  if (k === "/") { e.preventDefault(); q.focus(); q.select(); }
+  else if (k === "?") { e.preventDefault(); dlg.showModal(); }
+  else if (key === "f") { setView(cycle(VIEWS, view, e.shiftKey)); say(view + " face"); }
+  else if (key === "l") { setLayout(cycle(LAYOUTS, layout, e.shiftKey)); say((layout === "som" ? "SOM" : layout) + " layout"); }
+  else if (key === "g") {
+    if (!hasGaps()) { say("No gaps for this layout"); return; }
+    gapsBtn.click(); say(gaps ? "Gaps on" : "Gaps off");
+  }
+  else if (k >= "1" && k <= "3" && match) toggleZone(["close", "neutral", "accent"][k - 1]);
+  else if (key === "m" && sel !== null) startMatch();
+  else if (key === "c") copyHex();
 });
 addEventListener("scroll", pin, { passive: true });
 wrap.addEventListener("scroll", pin, { passive: true });
@@ -585,15 +774,16 @@ function find() {
         <span class="nm">${bold(r.name)}</span>
         ${match ? `<span class="zb${best(r.ts) === "none" ? " none" : ""}" data-z="${best(r.ts)}">${ZLABEL[best(r.ts)]}</span>`
                 : r.ts.length > 1 ? `<span class="zb count">${r.ts.length} tiles</span>` : ""}</div>`).join("")
-      + `<div class="res-foot"><span>${res.length} block${res.length === 1 ? "" : "s"}</span><span>↑↓ move</span><span>↵ select</span></div>`
+      + `<div class="res-foot"><span>${res.length} block${res.length === 1 ? "" : "s"}</span><span class="kh">↑↓ move</span><span class="kh">↵ select</span></div>`
     : `<div class="res-empty">No block called “${q.value.trim().replace(/[<&]/g, "")}”</div>`;
 }
 // picking a result selects its first tile and clears the search
-function choose(k) {
+function choose(k, key = false) {
   if (!res[k]) return;
   const i = res[k].ts[0];
-  q.value = ""; q.blur(); find();
-  select(i);
+  q.value = ""; find();
+  map.focus({ preventScroll: true });
+  select(i, key);
   const r = tiles[i].getBoundingClientRect(), w = wrap.getBoundingClientRect();
   if (r.top < w.top || r.bottom > w.bottom || r.left < w.left || r.right > w.right) tiles[i].scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
 }
@@ -605,7 +795,7 @@ q.addEventListener("keydown", e => {
   const n = Math.min(MAX, res.length);
   if (e.key === "ArrowDown" && n) { e.preventDefault(); act = (act + 1) % n; find(); }
   else if (e.key === "ArrowUp" && n) { e.preventDefault(); act = (act - 1 + n) % n; find(); }
-  else if (e.key === "Enter") { e.preventDefault(); choose(act); }
+  else if (e.key === "Enter") { e.preventDefault(); choose(act, true); }
   else if (e.key === "Escape") { if (q.value) { q.value = ""; find(); } else q.blur(); }
 });
 // a tap chooses at once, before the field loses focus and the list closes
