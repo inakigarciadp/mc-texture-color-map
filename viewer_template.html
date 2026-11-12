@@ -7,7 +7,7 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { --z-close: #ffb02e; --z-neutral: #f4f4f0; --z-accent: #2ee6f0; --z-src: #ff3b30;
+body { --hit: #c6ff3d; --z-close: #ffb02e; --z-neutral: #f4f4f0; --z-accent: #2ee6f0; --z-src: #ff3b30;
        --ease-out: cubic-bezier(.23,1,.32,1); --ease-drawer: cubic-bezier(.32,.72,0,1); }
 button { font: inherit; color: inherit; }
 #wrap { overflow: auto; display: grid; place-items: center; }
@@ -26,6 +26,19 @@ button { font: inherit; color: inherit; }
 #map div.z-neutral::after { background: var(--z-neutral); }
 #map div.z-accent::after { background: var(--z-accent); }
 #map div.z-src { box-shadow: inset 0 0 0 var(--b) var(--z-src); z-index: 1; }
+/* in match mode, the tile you're pointing at (selected, or the search row you're on) keeps its colors
+   even when it isn't a match, so you can still see it */
+#map.matching div.sel, #map.matching div.cur { opacity: 1; filter: none; }
+/* search rings sit on a layer of their own, so they stay bright on tiles the match dims.
+   The map stacks them inside itself, so popovers over the map stay on top */
+#map { isolation: isolate; }
+#map div.ring, #map.matching div.ring { opacity: 1; filter: none; pointer-events: none; background: none; z-index: 6;
+  box-shadow: 0 0 0 calc(1px / var(--s)) #000c, 0 0 0 calc(3px / var(--s)) var(--hit), 0 0 0 calc(4px / var(--s)) #000c; }
+#map div.ring.cur { z-index: 7; box-shadow: 0 0 0 calc(1px / var(--s)) #000, 0 0 0 calc(4px / var(--s)) #fff, 0 0 0 calc(5px / var(--s)) #000; }
+/* a ring that closes in on the tile once, so a tiny tile is easy to spot */
+#map div.ring::after { content: ""; position: absolute; inset: 0; border-radius: 2px;
+  box-shadow: 0 0 0 calc(3px / var(--s)) var(--hit); opacity: 0; animation: ping .5s var(--ease-out); }
+@keyframes ping { from { transform: scale(3); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1); opacity: 0; } }
 #tip { position: fixed; z-index: 20; pointer-events: none; display: none; }
 #tip.pinned { pointer-events: auto; }
 /* the pinned tooltip grows out of its tile, from below or above */
@@ -126,6 +139,38 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 .foot svg { width: 13px; height: 13px; fill: currentColor; flex: none; }
 @media (hover: hover) and (pointer: fine) { .foot a:hover { color: #1f2024; } }
 #wrap { flex: 1; min-width: 0; padding: 24px; }
+/* find a block: a field above the controls and a list of blocks under it */
+.search { flex: none; padding: 4px 20px 10px; position: relative; }
+.field { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 10px; border-radius: 9px; background: #eeeeeb;
+  box-shadow: inset 0 0 0 1px transparent; transition: box-shadow .15s var(--ease-out), background .15s var(--ease-out); cursor: text; }
+.field:focus-within { background: #fff; box-shadow: inset 0 0 0 1.5px #1f2024; }
+.field svg { width: 14px; height: 14px; flex: none; stroke: #868893; fill: none; stroke-width: 2; }
+.field input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit; font-size: 13px; color: #1f2024; padding: 0; }
+.field input::placeholder { color: #a3a5ad; }
+.field kbd { font: 600 10.5px/1 ui-monospace, Menlo, monospace; color: #868893; border: 1px solid #dcdcd7; border-bottom-width: 2px;
+  border-radius: 4px; padding: 2px 5px; background: #fff; }
+.field:focus-within kbd { display: none; }
+#results { position: absolute; left: 12px; right: 12px; top: calc(100% - 4px); z-index: 30; background: #fff; border-radius: 10px; padding: 4px;
+  box-shadow: 0 0 0 1px #0001, 0 10px 30px #0003; transform-origin: 50% 0;
+  transition: opacity .15s var(--ease-out), transform .15s var(--ease-out); }
+#results[hidden] { display: none; }
+@starting-style { #results { opacity: 0; transform: scale(.97); } }
+.res { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; padding: 6px 8px; border-radius: 7px; cursor: pointer; }
+.res .mini { grid-row: span 2; min-width: 39px; display: inline-flex; gap: 3px; }
+.res .mini i { width: 18px; height: 18px; border-radius: 3px; background-size: 100% 100%; image-rendering: pixelated; position: relative; box-shadow: inset 0 0 0 1px #0001; }
+/* the same corner marker as the map's tiles */
+.res .mini i::after { content: ""; position: absolute; left: 0; top: 0; width: 7px; height: 7px; clip-path: polygon(0 0,100% 0,0 100%); background: var(--c); }
+.res .nm { font-size: 13px; text-transform: capitalize; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.res mark { background: none; color: inherit; font-weight: 700; }
+.res.act { background: #f0f0ed; }
+.zb { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: #5d5f68; white-space: nowrap; }
+.zb::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c); box-shadow: inset 0 0 0 1px #0003; }
+.zb.none { color: #a3a5ad; font-weight: 500; } .zb.none::before { background: none; box-shadow: inset 0 0 0 1.5px #c4c5cb; }
+.zb.count { color: #a3a5ad; font-weight: 400; } .zb.count::before { display: none; }
+[data-z=src] { --c: var(--z-src); } [data-z=none] { --c: transparent; }
+.res-empty { padding: 10px; color: #a3a5ad; font-size: 12px; text-align: center; }
+.res-foot { display: flex; gap: 10px; padding: 6px 8px 3px; border-top: 1px solid #eeeeea; margin-top: 4px; color: #a3a5ad; font-size: 11px; }
+.res-foot span:first-child { flex: 1; }
 #map div.sel { box-shadow: 0 0 0 calc(1px / var(--s)) #0006, 0 0 0 calc(3px / var(--s)) #fff, 0 0 0 calc(4px / var(--s)) #0006;
   z-index: 3; }
 #tip { background: #1f2024f2; color: #fff; padding: 6px 10px; border-radius: 7px; max-width: min(92vw, 320px); box-shadow: 0 6px 20px #0004; }
@@ -141,6 +186,10 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
   #side { width: auto; border: 0; border-bottom: 1px solid #0002; overflow: visible; position: relative; z-index: 5; }
   .scroll { overflow: visible; background: none; }
   .top { padding: 12px 14px 10px; } .top p { display: none; }
+  .search { padding: 0 14px 10px; }
+  /* 16px stops phones zooming in on focus */
+  .field { height: 40px; } .field input { font-size: 16px; } .field kbd, .res-foot span:not(:first-child) { display: none; }
+  #results { left: 8px; right: 8px; }
   /* one full-width row per control, both choices as the same segmented control */
   .ctrls { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 10px; }
   section { padding: 0; border: 0; } h2 { display: none; }
@@ -191,6 +240,7 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 /* keep the dimming and fades, drop the movement */
 @media (prefers-reduced-motion: reduce) {
   #map div { transition: opacity .2s ease; }
+  #map div.ring::after { animation: none; }
   #gaps i::after, #views::before, #layouts::before { transition: none; }
   #tip.pinned, #gapsinfo, .matchsec { transform: none; }
   @starting-style { #tip.pinned, #gapsinfo.open, body.matching .matchsec { transform: none; } }
@@ -199,8 +249,14 @@ body.selecting #sel .card { display: grid; grid-template-columns: 56px 1fr; gap:
 </head>
 <body>
 <aside id="side">
-  <div class="scroll">
   <div class="top"><h1><span class="logo"></span>Block colors</h1><p>Minecraft <span id="version"></span> · <span id="count"></span></p></div>
+  <div class="search">
+    <label class="field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="q" placeholder="Find a block" spellcheck="false" autocomplete="off" enterkeyhint="search"
+        role="combobox" aria-label="Find a block" aria-controls="results" aria-expanded="false"><kbd>/</kbd></label>
+    <div id="results" role="listbox" hidden></div>
+  </div>
+  <div class="scroll">
   <div class="ctrls">
     <section><h2>Face</h2><div id="views"></div></section>
     <section><h2>Layout</h2><div id="layouts"></div></section>
@@ -327,6 +383,7 @@ function draw(instant) {
   map.style.setProperty("--b", Math.max(1, Math.round(cell / 24)) / s + "px");
   map.style.setProperty("--m", Math.max(4, Math.round(cell / 5)) / s + "px");
   if (fresh) applyMatch();
+  syncRings(instant);
   if (instant) { map.offsetWidth; tiles.forEach(e => e.style.transition = ""); }
   if (sel !== null) pin();
   writeHash();
@@ -360,25 +417,34 @@ function applyMatch() {
     document.body.classList.toggle("matching", !!match);
     draw();
   }
-  if (!match) { tiles.forEach(e => e.classList.remove("on", "z-close", "z-neutral", "z-accent", "z-src")); return; }
+  if (!match) { tiles.forEach(e => e.classList.remove("on", "z-close", "z-neutral", "z-accent", "z-src")); if (q.value) find(); return; }
   chip.querySelector(".src").className = "src t" + match.t;
   if (chip.querySelector(".src-name")) chip.querySelector(".src-name").textContent = match.n || "";
   chip.querySelectorAll("[data-z]").forEach(b => { b.classList.toggle("on", zones[b.dataset.z]); b.setAttribute("aria-pressed", zones[b.dataset.z]); });
-  const [, sC, sH] = lch(...match.c), G = D.gray * 1000, C = D.views[view].c;
   tiles.forEach((e, i) => {
-    const [, c, h] = lch(C[3 * i], C[3 * i + 1], C[3 * i + 2]);
-    const dh = Math.abs(((h - sH) % 360 + 540) % 360 - 180);
-    let z = null;
-    if (c < G) z = sC < G && zones.close ? "close" : "neutral";
-    else if (sC >= G && dh <= 30) z = "close";
-    else if (sC >= G && dh >= 150) z = "accent";
-    const src = D.views[view].t[i] === match.t;
+    const z = zoneOf(i), src = z === "src";
     const on = src || (z !== null && zones[z]);
     e.classList.toggle("on", on);
     e.classList.toggle("z-src", src);
     for (const k of ["close", "neutral", "accent"]) e.classList.toggle("z-" + k, on && !src && z === k);
   });
+  if (q.value) find();
 }
+
+// the zone of tile i against the matched block: "src" (same texture), "close", "neutral", "accent" or null
+function zoneOf(i) {
+  const V = D.views[view];
+  if (V.t[i] === match.t) return "src";
+  const [, sC, sH] = lch(...match.c), G = D.gray * 1000, C = V.c;
+  const [, c, h] = lch(C[3 * i], C[3 * i + 1], C[3 * i + 2]);
+  const dh = Math.abs(((h - sH) % 360 + 540) % 360 - 180);
+  if (c < G) return sC < G && zones.close ? "close" : "neutral";
+  if (sC >= G && dh <= 30) return "close";
+  if (sC >= G && dh >= 150) return "accent";
+  return null;
+}
+// what the match says about tile i, counting the zones that are switched off as no match
+const verdict = i => { const z = zoneOf(i); return z === "src" || (z && zones[z]) ? z : "none"; };
 
 // the matched tile is kept with its view and index, so the url can point back to it
 function matchOf(v, i) {
@@ -460,16 +526,116 @@ document.addEventListener("click", e => {
   if (i !== undefined) select(+i === sel ? null : +i);
   else if (!e.target.closest("#bar, #tip, #chip, #sel, #side, nav")) select(null);
 });
-// Esc backs out one step at a time: the gaps popover, then the selection, then match mode
+// Esc backs out one step at a time: the gaps popover, the search, then the selection, then match mode.
+// "/" jumps to the search from anywhere but a text field
 addEventListener("keydown", e => {
+  if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) {
+    e.preventDefault(); q.focus(); q.select(); return;
+  }
   if (e.key !== "Escape") return;
   if (gapsInfo.classList.contains("open")) showInfo(false);
+  else if (q.value) { q.value = ""; find(); }
   else if (sel !== null) select(null);
   else if (match) { match = null; applyMatch(); }
 });
 addEventListener("scroll", pin, { passive: true });
 wrap.addEventListener("scroll", pin, { passive: true });
 addEventListener("resize", () => draw(true));
+
+// find a block by name: every typed word must start a word of the name ("dark pl" finds dark oak planks).
+// Results are blocks, not tiles, and a block lights up all of its tiles (a log's bark and rings)
+const q = $("#q"), results = $("#results");
+const ZLABEL = { src: "Source", close: "Similar hue", neutral: "Neutral", accent: "Accent", none: "No match" };
+let blocksView = null, blocks = [], res = [], act = 0;
+function search(text) {
+  if (blocksView !== view) {
+    const m = new Map();
+    D.views[view].n.forEach((s, i) => s.split(", ").forEach(n => { if (!m.has(n)) m.set(n, []); m.get(n).push(i); }));
+    blocks = [...m].map(([name, ts]) => ({ name, ts, words: name.split(" ") }));
+    blocksView = view;
+  }
+  text = text.toLowerCase().trim();
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return blocks.filter(b => words.every(w => b.words.some(x => x.startsWith(w))))
+    .sort((a, b) => b.name.startsWith(text) - a.name.startsWith(text) || a.name.length - b.name.length || a.name.localeCompare(b.name));
+}
+// the best verdict over a block's tiles, for its one badge
+const RANK = ["src", "close", "accent", "neutral", "none"];
+const best = ts => ts.map(verdict).sort((a, b) => RANK.indexOf(a) - RANK.indexOf(b))[0];
+function bold(name) {
+  const words = q.value.toLowerCase().trim().split(/\s+/);
+  return name.split(" ").map(x => { const w = words.find(w => w && x.startsWith(w)); return w ? `<mark>${x.slice(0, w.length)}</mark>${x.slice(w.length)}` : x; }).join(" ");
+}
+const MAX = 7;
+function find() {
+  res = search(q.value);
+  act = Math.min(act, Math.max(0, res.length - 1));
+  ring(res.flatMap(r => r.ts), res[act] ? res[act].ts : []);
+  const open = !!q.value.trim() && document.activeElement === q;
+  results.hidden = !open;
+  q.setAttribute("aria-expanded", open);
+  if (!open) return;
+  const T = D.views[view].t;
+  results.innerHTML = res.length
+    ? res.slice(0, MAX).map((r, k) => `<div class="res${k === act ? " act" : ""}" role="option" aria-selected="${k === act}" data-k="${k}">
+        <span class="mini">${r.ts.slice(0, 3).map(i => `<i class="t${T[i]}"${match ? ` data-z="${verdict(i)}"` : ""}></i>`).join("")}</span>
+        <span class="nm">${bold(r.name)}</span>
+        ${match ? `<span class="zb${best(r.ts) === "none" ? " none" : ""}" data-z="${best(r.ts)}">${ZLABEL[best(r.ts)]}</span>`
+                : r.ts.length > 1 ? `<span class="zb count">${r.ts.length} tiles</span>` : ""}</div>`).join("")
+      + `<div class="res-foot"><span>${res.length} block${res.length === 1 ? "" : "s"}</span><span>↑↓ move</span><span>↵ select</span></div>`
+    : `<div class="res-empty">No block called “${q.value.trim().replace(/[<&]/g, "")}”</div>`;
+}
+// picking a result selects its first tile and clears the search
+function choose(k) {
+  if (!res[k]) return;
+  const i = res[k].ts[0];
+  q.value = ""; q.blur(); find();
+  select(i);
+  const r = tiles[i].getBoundingClientRect(), w = wrap.getBoundingClientRect();
+  if (r.top < w.top || r.bottom > w.bottom || r.left < w.left || r.right > w.right) tiles[i].scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+}
+q.addEventListener("input", () => { act = 0; find(); });
+q.addEventListener("focus", find);
+q.addEventListener("blur", () => setTimeout(find, 0));
+q.addEventListener("keydown", e => {
+  e.stopPropagation(); // the field handles its own Esc
+  const n = Math.min(MAX, res.length);
+  if (e.key === "ArrowDown" && n) { e.preventDefault(); act = (act + 1) % n; find(); }
+  else if (e.key === "ArrowUp" && n) { e.preventDefault(); act = (act - 1 + n) % n; find(); }
+  else if (e.key === "Enter") { e.preventDefault(); choose(act); }
+  else if (e.key === "Escape") { if (q.value) { q.value = ""; find(); } else q.blur(); }
+});
+// a tap chooses at once, before the field loses focus and the list closes
+results.addEventListener("pointerdown", e => { const r = e.target.closest(".res"); if (r) { e.preventDefault(); choose(+r.dataset.k); } });
+results.addEventListener("pointermove", e => { const r = e.target.closest(".res"); if (r && +r.dataset.k !== act) { act = +r.dataset.k; find(); } });
+
+// one ring per hit; the current row's tiles get a white ring and keep their colors in match mode
+let rings = [], ringIds = [], ringCur = new Set();
+function ring(ids, cur) {
+  ids = [...new Set(ids)];
+  const same = ids.length === ringIds.length && ids.every((v, k) => v === ringIds[k]);
+  ringIds = ids; ringCur = new Set(cur);
+  if (!same) { rings.forEach(r => r.remove()); rings = []; }
+  syncRings(!same);
+}
+function syncRings(instant) {
+  // a new view rebuilds the map, which takes the rings with it
+  if (rings.length !== ringIds.length || rings.some(r => !r.isConnected)) {
+    rings.forEach(r => r.remove());
+    rings = ringIds.map(() => { const r = document.createElement("div"); r.className = "ring"; return r; });
+    instant = true;
+  }
+  rings.forEach((r, k) => {
+    if (instant) r.style.transition = "none";
+    r.style.transform = tiles[ringIds[k]].style.transform;
+    r.classList.toggle("cur", ringCur.has(ringIds[k]));
+    if (!r.isConnected) map.appendChild(r);
+  });
+  // jump into place, then glide with the tiles on the next layout change
+  if (instant && rings.length) { map.offsetWidth; rings.forEach(r => r.style.transition = ""); }
+  tiles.forEach((e, i) => e.classList.toggle("cur", ringCur.has(i)));
+}
 
 // the whole state lives in the url hash (#view=top&layout=wheel&gaps=1&match=side.12&zones=close,accent&sel=40),
 // so reloading or sharing the link reopens the same map. Defaults are left out.
